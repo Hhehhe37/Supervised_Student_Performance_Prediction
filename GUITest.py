@@ -54,6 +54,7 @@ class MissingValueApp:
         else:
             self.output_text.insert(tk.END, "No missing values found.\n")
 
+# Test Run
 # Run the app
 if __name__ == "__main__":
     root = tk.Tk()
