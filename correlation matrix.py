@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Step 1: Load your CSV file
-df = pd.read_csv("Student_performance_data _.csv")  # replace with your file name
+df = pd.read_csv("Corrected_StudentsPerformance.csv")  # replace with your file name
 
 # Step 2: Create correlation matrix
 correlation_matrix = df.corr(numeric_only=True)  # Only include numeric columns
