@@ -4,6 +4,7 @@ from tkinter import messagebox
 from correlation_matrix import CorrelationMatrixView
 from DataCleaning import DataCleaningWindow
 from KNN_performance_measure import KNNPerformanceWindow
+from DecisionTree_performance_measure import DecisionTreePerformanceWindow
 
 class MissingValueApp:
     def __init__(self, root):
@@ -26,6 +27,10 @@ class MissingValueApp:
         self.performance_button = tk.Button(root, text="KNN performance", font=("Arial", 14), width=button_width, command=self.open_knn_prediction_window) # !!! Need to add command to call function at future
         self.performance_button.pack(pady=20)
 
+        self.dtree_button = tk.Button(root, text="Decision Tree performance", font=("Arial", 14), width=button_width, command=self.open_dtree_prediction_window)
+        self.dtree_button.pack(pady=20)
+
+
         self.prediction_button = tk.Button(root, text="Student Performance Prediction", font=("Arial", 14), width=button_width) # !!! Need to add command to call function at future
         self.prediction_button.pack(pady=20)
 
@@ -40,6 +45,10 @@ class MissingValueApp:
     def open_knn_prediction_window(self):
         knn_accuracy_window = tk.Toplevel(self.root)
         KNNPerformanceWindow(knn_accuracy_window)
+
+    def open_dtree_prediction_window(self):
+        dtree_accuracy_window = tk.Toplevel(self.root)
+        DecisionTreePerformanceWindow(dtree_accuracy_window)
     
 # Run the app
 if __name__ == "__main__":
