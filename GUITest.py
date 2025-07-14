@@ -24,7 +24,7 @@ class MissingValueApp:
         self.correlation_button = tk.Button(root, text="Correlation Matrix", font=("Arial", 14), width=button_width, command=self.open_correlation_window)
         self.correlation_button.pack(pady=20)
 
-        self.performance_button = tk.Button(root, text="KNN performance", font=("Arial", 14), width=button_width, command=self.open_knn_prediction_window) # !!! Need to add command to call function at future
+        self.performance_button = tk.Button(root, text="KNN performance", font=("Arial", 14), width=button_width, command=self.open_knn_prediction_window)
         self.performance_button.pack(pady=20)
 
         self.dtree_button = tk.Button(root, text="Decision Tree performance", font=("Arial", 14), width=button_width, command=self.open_dtree_prediction_window)
