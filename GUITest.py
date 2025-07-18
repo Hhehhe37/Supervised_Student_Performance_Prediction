@@ -9,7 +9,7 @@ class MissingValueApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Student Performance Prediction")
-        self.root.geometry("1280x960")
+        self.root.geometry("1280x800")
         self.root.configure(bg="#f0f4f7")
 
         # Create a main frame to center content

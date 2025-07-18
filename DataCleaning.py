@@ -9,37 +9,46 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 class DataCleaningWindow:
     def __init__(self, window): 
         self.root = window
-        self.root.title("Student Performance Missing Value Checker")
-        self.root.geometry("900x600")
-        self.df = None
+        self.root.title("🧹 Student Performance Missing Value Checker")
+        self.root.geometry("1280x800")
+        self.root.configure(bg="#f5f7fa")
 
+        self.df = None
         self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")
 
-        main_frame = ttk.Frame(self.root, padding=15)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Main frame with padding and white bg for content area
+        main_frame = ttk.Frame(self.root, padding=20, style="Card.TFrame")
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
-        ttk.Label(main_frame, text="Missing Value Report", font=("Helvetica", 16, "bold")).pack(pady=10)
+        # Title label
+        title_label = ttk.Label(main_frame, text="Missing Value Report", font=("Segoe UI", 18, "bold"))
+        title_label.pack(pady=(0, 15))
 
-        # Treeview for showing missing values per column
-        self.tree = ttk.Treeview(main_frame, columns=("Column", "Missing Count"), show="headings", height=15)
+        # Treeview Frame (to hold treeview + scrollbar nicely)
+        tree_frame = ttk.Frame(main_frame)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Treeview widget
+        self.tree = ttk.Treeview(tree_frame, columns=("Column", "Missing Count"), show="headings", height=15)
         self.tree.heading("Column", text="Column")
         self.tree.heading("Missing Count", text="Missing Values")
-        self.tree.column("Column", width=400, anchor=tk.W)
+        self.tree.column("Column", width=500, anchor=tk.W)
         self.tree.column("Missing Count", width=150, anchor=tk.CENTER)
-        self.tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        # Vertical scrollbar for treeview
+        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand=scrollbar.set)
 
-        # Status label below
-        self.status_label = ttk.Label(main_frame, text="", font=("Helvetica", 10), foreground="green")
-        self.status_label.pack(pady=10)
+        # Status label
+        self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 12), foreground="#228B22")
+        self.status_label.pack(pady=15)
 
-        # Load and clean data automatically
+        # Load and process data automatically
         self.load_and_process_data()
 
+    # -- Your existing functions unchanged --
     def load_and_process_data(self):
         try:
             self.df = pd.read_csv(self.file_path)
@@ -47,10 +56,7 @@ class DataCleaningWindow:
             messagebox.showerror("Error", f"Failed to load file:\n{e}")
             return
         
-        # Remove incorrect data
         self.remove_incorrect_data()
-
-        # Check missing values
         self.check_missing()
 
     def assign_grade_class(self, gpa):
@@ -91,8 +97,17 @@ class DataCleaningWindow:
         else:
             self.status_label.config(text="No missing values found.")
 
-# Running the window directly for test:
+
+# Add ttk style for card-like frame appearance (optional)
+def setup_styles():
+    style = ttk.Style()
+    style.theme_use('default')
+    style.configure("Card.TFrame", background="#ffffff", relief="raised", borderwidth=1)
+    style.configure("Treeview", font=("Segoe UI", 11))
+    style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
+
 if __name__ == "__main__":
+    setup_styles()
     root = tk.Tk()
     app = DataCleaningWindow(root)
     root.mainloop()

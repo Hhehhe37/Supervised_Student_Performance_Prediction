@@ -1,7 +1,9 @@
 import pandas as pd
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 import os
+
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
@@ -11,18 +13,34 @@ OUTPUT_FOLDER = "CSV_Files"
 class KNNPerformanceWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("KNN Performance Measure - Auto Best K")
-        self.root.geometry("800x600")
+        self.root.title("📈 KNN Performance Evaluation")
+        self.root.geometry("850x650")
+        self.root.configure(bg="#f5f7fa")
 
-        self.label = tk.Label(root, text="Automatically finding best k from 1 to 20...", font=("Arial", 14))
-        self.label.pack(pady=20)
+        # Title
+        title_label = tk.Label(root, text="🔍 KNN Classifier - Find Best k (1 to 20)", font=("Segoe UI", 18, "bold"), bg="#f5f7fa", fg="#333")
+        title_label.pack(pady=20)
 
-        self.text_button = tk.Button(root, text="Run Evaluation", font=("Arial", 12), command=self.evaluate_knn)
+        # Run Evaluation Button
+        self.text_button = ttk.Button(root, text="Run Evaluation", command=self.evaluate_knn)
         self.text_button.pack(pady=10)
 
-        self.output_text = tk.Text(root, height=20, width=80)
-        self.output_text.pack(pady=10)
+        # Output Frame with Label
+        output_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
+        output_frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+
+        output_label = tk.Label(output_frame, text="Evaluation Results", font=("Segoe UI", 14, "bold"), bg="#ffffff", anchor="w")
+        output_label.pack(anchor="w", padx=10, pady=10)
+
+        # Scrollable Text Widget
+        self.output_text = tk.Text(output_frame, height=20, font=("Courier New", 11), wrap="none")
+        self.output_text.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
         self.output_text.config(state="disabled")
+
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(output_frame, command=self.output_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.output_text.config(yscrollcommand=scrollbar.set)
 
     def evaluate_knn(self):
         try:
@@ -33,6 +51,11 @@ class KNNPerformanceWindow:
             y = df["GradeClass"]
 
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+            # ✅ Fix: Scale x_test using transform, not fit_transform
+            scaler = StandardScaler()
+            x_train = scaler.fit_transform(x_train)
+            x_test = scaler.transform(x_test)
 
             best_k = None
             best_accuracy = 0
@@ -48,12 +71,19 @@ class KNNPerformanceWindow:
                     best_accuracy = accuracy
                     best_k = k
 
+            # Display results
             self.output_text.config(state="normal")
             self.output_text.delete("1.0", tk.END)
-            # Uncomment below to show all k accuracies:
-            # for k, acc in results:
-            #     self.output_text.insert(tk.END, f"k = {k}, Accuracy = {acc:.2f}%\n")
-            self.output_text.insert(tk.END, f"Best k value: {best_k}\nHighest accuracy: {best_accuracy:.2f}%")
+
+            self.output_text.insert(tk.END, f"{'K Value':<10} {'Accuracy (%)':>15}\n")
+            self.output_text.insert(tk.END, "-" * 30 + "\n")
+            for k, acc in results:
+                self.output_text.insert(tk.END, f"{k:<10} {acc:>15.2f}\n")
+
+            self.output_text.insert(tk.END, "\n")
+            self.output_text.insert(tk.END, f"✅ Best k value: {best_k}\n")
+            self.output_text.insert(tk.END, f"🎯 Highest accuracy: {best_accuracy:.2f}%")
+
             self.output_text.config(state="disabled")
 
         except Exception as e:
