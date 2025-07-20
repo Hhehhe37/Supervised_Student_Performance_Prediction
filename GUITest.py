@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from correlation_matrix import CorrelationMatrixView
-from DataCleaning import DataCleaningWindow
+from DataPreprocessing.correlation_matrix import CorrelationMatrixView
+from DataPreprocessing.Check_Missing import CheckMissingWindow
 from KNN_performance_measure import KNNPerformanceWindow
 from DecisionTree_performance_measure import DecisionTreePerformanceWindow
 
@@ -39,7 +39,7 @@ class MissingValueApp:
         }
 
         # Buttons
-        tk.Button(main_frame, text="🧹 Data Cleaning", command=self.open_cleaning_window, **button_style).pack(pady=10)
+        tk.Button(main_frame, text="🧹 Data Preprocessing", command=self.open_cleaning_window, **button_style).pack(pady=10)
         tk.Button(main_frame, text="📊 Correlation Matrix", command=self.open_correlation_window, **button_style).pack(pady=10)
         tk.Button(main_frame, text="🤖 KNN Performance", command=self.open_knn_prediction_window, **button_style).pack(pady=10)
         tk.Button(main_frame, text="🌳 Decision Tree Performance", command=self.open_dtree_prediction_window, **button_style).pack(pady=10)
@@ -47,7 +47,7 @@ class MissingValueApp:
 
     def open_cleaning_window(self):
         new_window = tk.Toplevel(self.root)
-        DataCleaningWindow(new_window)
+        CheckMissingWindow(new_window)
 
     def open_correlation_window(self):
         corr_view = CorrelationMatrixView()

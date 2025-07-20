@@ -1,17 +1,18 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox
+from DataPreprocessing.Check_Duplicate import CheckDuplicateWindow
 import os
 
 OUTPUT_FOLDER = "CSV_Files"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-class DataCleaningWindow:
+class CheckMissingWindow:
     def __init__(self, window, callback=None): 
         self.callback = callback
         self.root = window
         self.root.title("🧹 Student Performance Missing Value Checker")
-        self.root.geometry("1280x800")
+        self.root.geometry("600x400")
         self.root.configure(bg="#f5f7fa")
 
         self.df = None
@@ -48,6 +49,9 @@ class DataCleaningWindow:
         self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 12), foreground="#228B22")
         self.status_label.pack(pady=15)
 
+        next_button = ttk.Button(main_frame, text="Next ➡️ Check Duplicates", command=self.open_duplicate_window)
+        next_button.pack(pady=10)
+
         # Load and process data automatically
         self.load_and_process_data()
 
@@ -59,34 +63,10 @@ class DataCleaningWindow:
             messagebox.showerror("Error", f"Failed to load file:\n{e}")
             return
         
-        self.remove_incorrect_data()
         self.check_missing()
-        self.check_duplicates()
 
-        combined_msg = f"{self.missing_msg} {self.duplicate_msg}"
         if self.callback:
-            self.callback(combined_msg)
-
-    def assign_grade_class(self, gpa):
-        if gpa >= 3.5:
-            return 0  # A
-        elif gpa >= 3.0:
-            return 1  # B
-        elif gpa >= 2.5:
-            return 2  # C
-        elif gpa >= 2.0:
-            return 3  # D
-        else:
-            return 4  # F
-
-    def remove_incorrect_data(self):
-        df = self.df.copy()
-        df['ExpectedGrade'] = df['GPA'].apply(self.assign_grade_class)
-        correct_df = df[df['GradeClass'] == df['ExpectedGrade']].copy()
-        self.df = correct_df.drop(columns=['ExpectedGrade'])
-        output_path = os.path.join(OUTPUT_FOLDER, "Corrected_StudentsPerformance.csv")
-        self.df.to_csv(output_path, index=False)
-        self.status_label.config(text=f"Incorrect data removed. Records before: {len(df)}, after: {len(self.df)}.")
+            self.callback(self.missing_msg)
 
     def check_missing(self):
         self.tree.delete(*self.tree.get_children())  # Clear previous content
@@ -105,18 +85,14 @@ class DataCleaningWindow:
         else:
             self.missing_msg = "No missing values found."
 
-    def check_duplicates(self):
-        duplicate_rows = self.df.duplicated()
-        total_duplicates = duplicate_rows.sum()
+        self.status_label.config(text=self.missing_msg)
 
-        if total_duplicates > 0:
-            self.df = self.df.drop_duplicates()
-            output_path = os.path.join(OUTPUT_FOLDER, "No_Duplicates_StudentsPerformance.csv")
-            self.df.to_csv(output_path, index=False)
-            self.duplicate_msg = f"Duplicates removed: {total_duplicates}"
-        else:
-            self.duplicate_msg = "No duplicated records found."
-
+    def open_duplicate_window(self):
+        self.root.destroy()
+        new_window = tk.Tk()
+        CheckDuplicateWindow(new_window)
+        new_window.mainloop()
+        
 
 # Add ttk style for card-like frame appearance (optional)
 def setup_styles():
@@ -129,5 +105,5 @@ def setup_styles():
 if __name__ == "__main__":
     setup_styles()
     root = tk.Tk()
-    app = DataCleaningWindow(root)
+    app = CheckMissingWindow(root)
     root.mainloop()
