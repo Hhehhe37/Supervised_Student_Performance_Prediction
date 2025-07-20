@@ -7,7 +7,8 @@ OUTPUT_FOLDER = "CSV_Files"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 class DataCleaningWindow:
-    def __init__(self, window): 
+    def __init__(self, window, callback=None): 
+        self.callback = callback
         self.root = window
         self.root.title("🧹 Student Performance Missing Value Checker")
         self.root.geometry("1280x800")
@@ -15,6 +16,8 @@ class DataCleaningWindow:
 
         self.df = None
         self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")
+        self.missing_msg = ""
+        self.duplicate_msg = ""
 
         # Main frame with padding and white bg for content area
         main_frame = ttk.Frame(self.root, padding=20, style="Card.TFrame")
@@ -58,6 +61,11 @@ class DataCleaningWindow:
         
         self.remove_incorrect_data()
         self.check_missing()
+        self.check_duplicates()
+
+        combined_msg = f"{self.missing_msg} {self.duplicate_msg}"
+        if self.callback:
+            self.callback(combined_msg)
 
     def assign_grade_class(self, gpa):
         if gpa >= 3.5:
@@ -93,9 +101,21 @@ class DataCleaningWindow:
             output_path = os.path.join(OUTPUT_FOLDER, "Cleaned_StudentsPerformance.csv")
             self.df = self.df.dropna()
             self.df.to_csv(output_path, index=False)
-            self.status_label.config(text=f"Total missing values: {total_missing}. Cleaned data saved as '{output_path}'.")
+            self.missing_msg = f"Missing values cleaned: {total_missing}"
         else:
-            self.status_label.config(text="No missing values found.")
+            self.missing_msg = "No missing values found."
+
+    def check_duplicates(self):
+        duplicate_rows = self.df.duplicated()
+        total_duplicates = duplicate_rows.sum()
+
+        if total_duplicates > 0:
+            self.df = self.df.drop_duplicates()
+            output_path = os.path.join(OUTPUT_FOLDER, "No_Duplicates_StudentsPerformance.csv")
+            self.df.to_csv(output_path, index=False)
+            self.duplicate_msg = f"Duplicates removed: {total_duplicates}"
+        else:
+            self.duplicate_msg = "No duplicated records found."
 
 
 # Add ttk style for card-like frame appearance (optional)

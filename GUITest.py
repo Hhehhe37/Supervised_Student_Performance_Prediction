@@ -10,7 +10,7 @@ class MissingValueApp:
         self.root = root
         self.root.title("Student Performance Prediction")
         self.root.geometry("1280x800")
-        self.root.configure(bg="#f0f4f7")
+        self.root.configure(bg="#dceeff")
 
         # Create a main frame to center content
         main_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="ridge")
@@ -27,12 +27,23 @@ class MissingValueApp:
 
         button_width = 40
 
+        button_style = {
+            "bg": "#4fa4ff",        # Blue
+            "fg": "white",          # White text
+            "font": ("Segoe UI", 12),
+            "width": 40,
+            "height": 2,
+            "bd": 0,
+            "activebackground": "#0056b3",  # Darker blue on hover
+            "activeforeground": "white",
+        }
+
         # Buttons
-        ttk.Button(main_frame, text="🧹 Data Cleaning", width=button_width, command=self.open_cleaning_window).pack(pady=10)
-        ttk.Button(main_frame, text="📊 Correlation Matrix", width=button_width, command=self.open_correlation_window).pack(pady=10)
-        ttk.Button(main_frame, text="🤖 KNN Performance", width=button_width, command=self.open_knn_prediction_window).pack(pady=10)
-        ttk.Button(main_frame, text="🌳 Decision Tree Performance", width=button_width, command=self.open_dtree_prediction_window).pack(pady=10)
-        ttk.Button(main_frame, text="📈 Student Performance Prediction", width=button_width).pack(pady=10)  # Future feature
+        tk.Button(main_frame, text="🧹 Data Cleaning", command=self.open_cleaning_window, **button_style).pack(pady=10)
+        tk.Button(main_frame, text="📊 Correlation Matrix", command=self.open_correlation_window, **button_style).pack(pady=10)
+        tk.Button(main_frame, text="🤖 KNN Performance", command=self.open_knn_prediction_window, **button_style).pack(pady=10)
+        tk.Button(main_frame, text="🌳 Decision Tree Performance", command=self.open_dtree_prediction_window, **button_style).pack(pady=10)
+        tk.Button(main_frame, text="📈 Student Performance Prediction",**button_style).pack(pady=10)  # Future feature
 
     def open_cleaning_window(self):
         new_window = tk.Toplevel(self.root)
