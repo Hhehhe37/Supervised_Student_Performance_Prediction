@@ -8,7 +8,7 @@ class CheckDuplicateWindow:
     def __init__(self, window): 
         self.root = window
         self.root.title("🔁 Duplicate Record Checker")
-        self.root.geometry("600x400")
+        self.root.geometry("900x600")
         self.root.configure(bg="#f5f7fa")
 
         self.file_path = os.path.join("CSV_Files", "Student_performance_data _.csv")

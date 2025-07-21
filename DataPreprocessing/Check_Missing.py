@@ -12,7 +12,7 @@ class CheckMissingWindow:
         self.callback = callback
         self.root = window
         self.root.title("🧹 Student Performance Missing Value Checker")
-        self.root.geometry("600x400")
+        self.root.geometry("900x600")
         self.root.configure(bg="#f5f7fa")
 
         self.df = None
