@@ -6,7 +6,8 @@ import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix, classification_report
 
 OUTPUT_FOLDER = "CSV_Files"
 
@@ -14,50 +15,31 @@ class KNNPerformanceWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("📈 KNN Performance Evaluation")
-        self.root.geometry("950x700")
+        self.root.geometry("850x650")
         self.root.configure(bg="#f5f7fa")
 
         # Title
-        title_label = tk.Label(root, text="🔍 KNN Classifier - Find Best k (1 to 20)", 
-                               font=("Segoe UI", 20, "bold"), bg="#f5f7fa", fg="#222")
-        title_label.pack(pady=15)
+        title_label = tk.Label(root, text="🔍 KNN Classifier - Find Best k (1 to 20)", font=("Segoe UI", 18, "bold"), bg="#f5f7fa", fg="#333")
+        title_label.pack(pady=20)
 
         # Run Evaluation Button
         self.text_button = ttk.Button(root, text="Run Evaluation", command=self.evaluate_knn)
         self.text_button.pack(pady=10)
 
-        # Notebook (Tabs)
-        notebook = ttk.Notebook(root)
-        notebook.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+        # Output Frame with Label
+        output_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
+        output_frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
 
-        # Tab 1: Accuracy Results
-        self.tab1 = tk.Frame(notebook, bg="#ffffff")
-        notebook.add(self.tab1, text="📊 Accuracy Results")
+        output_label = tk.Label(output_frame, text="Evaluation Results", font=("Segoe UI", 14, "bold"), bg="#ffffff", anchor="w")
+        output_label.pack(anchor="w", padx=10, pady=10)
 
-        # Table for results
-        self.tree = ttk.Treeview(self.tab1, columns=("k", "accuracy"), show="headings", height=15)
-        self.tree.heading("k", text="K Value")
-        self.tree.heading("accuracy", text="Accuracy (%)")
-        self.tree.column("k", anchor="center", width=120)
-        self.tree.column("accuracy", anchor="center", width=150)
-        self.tree.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
-
-        # Label for best result
-        self.best_label = tk.Label(self.tab1, text="", font=("Segoe UI", 12, "bold"), 
-                                   bg="#ffffff", fg="#0a84ff", anchor="w", justify="left")
-        self.best_label.pack(pady=10, padx=10, anchor="w")
-
-        # Tab 2: Confusion Matrix & Report
-        self.tab2 = tk.Frame(notebook, bg="#ffffff")
-        notebook.add(self.tab2, text="📑 Detailed Report")
-
-        # Scrollable Text
-        self.output_text = tk.Text(self.tab2, height=25, font=("Courier New", 11), wrap="none")
+        # Scrollable Text Widget
+        self.output_text = tk.Text(output_frame, height=20, font=("Courier New", 11), wrap="none")
         self.output_text.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
         self.output_text.config(state="disabled")
 
         # Add scrollbar
-        scrollbar = ttk.Scrollbar(self.tab2, command=self.output_text.yview)
+        scrollbar = ttk.Scrollbar(output_frame, command=self.output_text.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.config(yscrollcommand=scrollbar.set)
 
@@ -75,8 +57,9 @@ class KNNPerformanceWindow:
             x_train = scaler.fit_transform(x_train)
             x_test = scaler.transform(x_test)
 
-            best_k, best_accuracy = None, 0
-            results, best_y_pred = [], None
+            best_k = None
+            best_accuracy = 0
+            results = []
 
             for k in range(1, 21):
                 knn = KNeighborsClassifier(n_neighbors=k)
@@ -89,35 +72,26 @@ class KNNPerformanceWindow:
                     best_k = k
                     best_y_pred = y_pred  # save predictions for best k
 
-            # Clear Treeview
-            for row in self.tree.get_children():
-                self.tree.delete(row)
-
-            # Insert new results
-            for k, acc in results:
-                tag = "best" if k == best_k else ""
-                self.tree.insert("", "end", values=(k, f"{acc:.2f}"), tags=(tag,))
-
-            # Highlight best row
-            self.tree.tag_configure("best", background="#e6f2ff", foreground="#0a84ff")
-
-            # Best label
-            self.best_label.config(
-                text=f"✅ Best k value: {best_k}\n🎯 Highest accuracy: {best_accuracy:.2f}%"
-            )
-
-            # Confusion Matrix & Classification Report
-            cm = confusion_matrix(y_test, best_y_pred)
-            cm_accuracy = cm.trace() / cm.sum() * 100
-
-            report = classification_report(y_test, best_y_pred, digits=2)
-
+            # Display results
             self.output_text.config(state="normal")
             self.output_text.delete("1.0", tk.END)
 
+            self.output_text.insert(tk.END, f"{'K Value':<10} {'Accuracy (%)':>15}\n")
+            self.output_text.insert(tk.END, "-" * 30 + "\n")
+            for k, acc in results:
+                self.output_text.insert(tk.END, f"{k:<10} {acc:>15.2f}\n")
+
+            self.output_text.insert(tk.END, "\n")
+            self.output_text.insert(tk.END, f"✅ Best k value: {best_k}\n")
+            self.output_text.insert(tk.END, f"🎯 Highest accuracy: {best_accuracy:.2f}%\n\n")
+
+            # Confusion Matrix
+            cm = confusion_matrix(y_test, best_y_pred)
             self.output_text.insert(tk.END, "📊 Confusion Matrix:\n")
-            self.output_text.insert(tk.END, f"{cm}\n")
-            self.output_text.insert(tk.END, f"\nCalculated Accuracy from CM: {cm_accuracy:.2f}%\n\n")
+            self.output_text.insert(tk.END, f"{cm}\n\n")
+
+            # Precision, Recall, F1-score
+            report = classification_report(y_test, best_y_pred, digits=2)
             self.output_text.insert(tk.END, "📈 Classification Report (Precision, Recall, F1-Score):\n")
             self.output_text.insert(tk.END, f"{report}")
 

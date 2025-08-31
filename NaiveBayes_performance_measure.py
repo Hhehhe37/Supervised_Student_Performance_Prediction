@@ -11,8 +11,11 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 OUTPUT_FOLDER = "CSV_Files"
 
 class NaiveBayesPerformanceWindow:
-    def __init__(self, root):
+    def __init__(self, root, callback=None):
         self.root = root
+        self.callback = callback  # Add callback for returning results
+        self.best_results = None  # Store results
+        
         self.root.title("📈 Naive Bayes Performance Evaluation")
         self.root.geometry("950x700")
         self.root.configure(bg="#f5f7fa")
@@ -82,6 +85,14 @@ class NaiveBayesPerformanceWindow:
             y_pred = nb.predict(x_test)
             accuracy = accuracy_score(y_test, y_pred) * 100
 
+            # Store results for comparison
+            self.best_results = {
+                'model': 'Naive Bayes',
+                'accuracy': accuracy,
+                'confusion_matrix': confusion_matrix(y_test, y_pred),
+                'classification_report': classification_report(y_test, y_pred, output_dict=True)
+            }
+
             # Clear Treeview
             for row in self.tree.get_children():
                 self.tree.delete(row)
@@ -109,9 +120,17 @@ class NaiveBayesPerformanceWindow:
             self.output_text.insert(tk.END, f"{report}")
 
             self.output_text.config(state="disabled")
+            
+            # Call callback if provided
+            if self.callback:
+                self.callback('Naive Bayes', self.best_results)
 
         except Exception as e:
             messagebox.showerror("Error", str(e))
+
+    def get_best_results(self):
+        """Return the results for comparison"""
+        return self.best_results
 
 
 if __name__ == "__main__":
