@@ -4,6 +4,7 @@ from DataPreprocessing.correlation_matrix import CorrelationMatrixView
 from DataPreprocessing.Check_Missing import CheckMissingWindow
 from KNN_performance_measure import KNNPerformanceWindow
 from DecisionTree_performance_measure import DecisionTreePerformanceWindow
+from NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
 
 class MissingValueApp:
     def __init__(self, root):
@@ -18,15 +19,44 @@ class MissingValueApp:
 
         # Title
         self.label = tk.Label(main_frame, text="🎓 Student Performance Prediction App", font=("Helvetica", 18, "bold"), bg="#ffffff", fg="#333")
-        self.label.pack(pady=30)
+        self.label.pack(pady=20)
 
-        # Style buttons
-        style = ttk.Style()
-        style.configure("TButton", font=("Segoe UI", 12), padding=10)
-        style.map("TButton", background=[("active", "#0052cc")], foreground=[("active", "white")])
+        # Create a canvas and scrollbar for scrollable content
+        canvas_frame = tk.Frame(main_frame, bg="#ffffff")
+        canvas_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        button_width = 40
+        # Canvas for scrolling
+        self.canvas = tk.Canvas(canvas_frame, bg="#ffffff", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg="#ffffff")
 
+        # Configure scrolling
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack canvas and scrollbar
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Enable mouse wheel scrolling
+        def _on_mousewheel(event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_mousewheel(event):
+            self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_from_mousewheel(event):
+            self.canvas.unbind_all("<MouseWheel>")
+
+        self.canvas.bind('<Enter>', _bind_to_mousewheel)
+        self.canvas.bind('<Leave>', _unbind_from_mousewheel)
+
+        # Button style
         button_style = {
             "bg": "#4fa4ff",        # Blue
             "fg": "white",          # White text
@@ -38,12 +68,37 @@ class MissingValueApp:
             "activeforeground": "white",
         }
 
-        # Buttons
-        tk.Button(main_frame, text="🧹 Data Preprocessing", command=self.open_cleaning_window, **button_style).pack(pady=10)
-        tk.Button(main_frame, text="📊 Correlation Matrix", command=self.open_correlation_window, **button_style).pack(pady=10)
-        tk.Button(main_frame, text="🤖 KNN Performance", command=self.open_knn_prediction_window, **button_style).pack(pady=10)
-        tk.Button(main_frame, text="🌳 Decision Tree Performance", command=self.open_dtree_prediction_window, **button_style).pack(pady=10)
-        tk.Button(main_frame, text="📈 Student Performance Prediction",**button_style).pack(pady=10)  # Future feature
+        # Create buttons in the scrollable frame
+        self.create_buttons(button_style)
+
+        # Center the scrollable content
+        self.center_scrollable_content()
+
+    def create_buttons(self, button_style):
+        """Create all buttons in the scrollable frame"""
+        buttons = [
+            ("🧹 Data Preprocessing", self.open_cleaning_window),
+            ("📊 Correlation Matrix", self.open_correlation_window),
+            ("🤖 KNN Performance", self.open_knn_prediction_window),
+            ("🤖 Naive Bayes Performance", self.open_nb_prediction_window),
+            ("🌳 Decision Tree Performance", self.open_dtree_prediction_window),
+            ("📊 Model Comparison", self.open_model_comparison_window),
+            ("📈 Student Performance Prediction", self.open_prediction_window),  # Future feature
+        ]
+
+        for text, command in buttons:
+            btn = tk.Button(self.scrollable_frame, text=text, command=command, **button_style)
+            btn.pack(pady=8)
+
+    def center_scrollable_content(self):
+        """Center the content within the scrollable frame"""
+        self.scrollable_frame.update_idletasks()
+        canvas_width = self.canvas.winfo_width()
+        frame_width = self.scrollable_frame.winfo_reqwidth()
+        
+        if canvas_width > frame_width:
+            x_offset = (canvas_width - frame_width) // 2
+            self.canvas.create_window((x_offset, 0), window=self.scrollable_frame, anchor="nw")
 
     def open_cleaning_window(self):
         new_window = tk.Toplevel(self.root)
@@ -56,10 +111,21 @@ class MissingValueApp:
     def open_knn_prediction_window(self):
         knn_window = tk.Toplevel(self.root)
         KNNPerformanceWindow(knn_window)
+        
+    def open_nb_prediction_window(self):
+        nb_window = tk.Toplevel(self.root)
+        NaiveBayesPerformanceWindow(nb_window)
 
     def open_dtree_prediction_window(self):
         dtree_window = tk.Toplevel(self.root)
         DecisionTreePerformanceWindow(dtree_window)
+
+    # Placeholder methods for additional buttons
+    def open_model_comparison_window(self):
+        print("Model Comparison window - To be implemented")
+
+    def open_prediction_window(self):
+        print("Student Performance Prediction window - To be implemented")
 
 # Run the app
 if __name__ == "__main__":

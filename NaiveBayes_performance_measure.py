@@ -5,25 +5,25 @@ import os
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
 OUTPUT_FOLDER = "CSV_Files"
 
-class KNNPerformanceWindow:
+class NaiveBayesPerformanceWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("📈 KNN Performance Evaluation")
+        self.root.title("📈 Naive Bayes Performance Evaluation")
         self.root.geometry("950x700")
         self.root.configure(bg="#f5f7fa")
 
         # Title
-        title_label = tk.Label(root, text="🔍 KNN Classifier - Find Best k (1 to 20)", 
+        title_label = tk.Label(root, text="🔍 Naive Bayes Classifier Evaluation", 
                                font=("Segoe UI", 20, "bold"), bg="#f5f7fa", fg="#222")
         title_label.pack(pady=15)
 
         # Run Evaluation Button
-        self.text_button = ttk.Button(root, text="Run Evaluation", command=self.evaluate_knn)
+        self.text_button = ttk.Button(root, text="Run Evaluation", command=self.evaluate_nb)
         self.text_button.pack(pady=10)
 
         # Notebook (Tabs)
@@ -35,10 +35,10 @@ class KNNPerformanceWindow:
         notebook.add(self.tab1, text="📊 Accuracy Results")
 
         # Table for results
-        self.tree = ttk.Treeview(self.tab1, columns=("k", "accuracy"), show="headings", height=15)
-        self.tree.heading("k", text="K Value")
+        self.tree = ttk.Treeview(self.tab1, columns=("classifier", "accuracy"), show="headings", height=15)
+        self.tree.heading("classifier", text="Classifier")
         self.tree.heading("accuracy", text="Accuracy (%)")
-        self.tree.column("k", anchor="center", width=120)
+        self.tree.column("classifier", anchor="center", width=150)
         self.tree.column("accuracy", anchor="center", width=150)
         self.tree.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
@@ -61,7 +61,7 @@ class KNNPerformanceWindow:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.config(yscrollcommand=scrollbar.set)
 
-    def evaluate_knn(self):
+    def evaluate_nb(self):
         try:
             file_path = os.path.join(OUTPUT_FOLDER, "FilteredStudentPerformance.csv")
             df = pd.read_csv(file_path)
@@ -71,46 +71,33 @@ class KNNPerformanceWindow:
 
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
+            # Standardize features (optional for Naive Bayes)
             scaler = StandardScaler()
             x_train = scaler.fit_transform(x_train)
             x_test = scaler.transform(x_test)
 
-            best_k, best_accuracy = None, 0
-            results, best_y_pred = [], None
-
-            for k in range(1, 21):
-                knn = KNeighborsClassifier(n_neighbors=k)
-                knn.fit(x_train, y_train)
-                y_pred = knn.predict(x_test)
-                accuracy = accuracy_score(y_test, y_pred) * 100
-                results.append((k, accuracy))
-                if accuracy > best_accuracy:
-                    best_accuracy = accuracy
-                    best_k = k
-                    best_y_pred = y_pred  # save predictions for best k
+            # Train Naive Bayes
+            nb = GaussianNB()
+            nb.fit(x_train, y_train)
+            y_pred = nb.predict(x_test)
+            accuracy = accuracy_score(y_test, y_pred) * 100
 
             # Clear Treeview
             for row in self.tree.get_children():
                 self.tree.delete(row)
 
-            # Insert new results
-            for k, acc in results:
-                tag = "best" if k == best_k else ""
-                self.tree.insert("", "end", values=(k, f"{acc:.2f}"), tags=(tag,))
-
-            # Highlight best row
-            self.tree.tag_configure("best", background="#e6f2ff", foreground="#0a84ff")
+            # Insert result
+            self.tree.insert("", "end", values=("Naive Bayes", f"{accuracy:.2f}"))
 
             # Best label
             self.best_label.config(
-                text=f"✅ Best k value: {best_k}\n🎯 Highest accuracy: {best_accuracy:.2f}%"
+                text=f"✅ Classifier: Naive Bayes\n🎯 Accuracy: {accuracy:.2f}%"
             )
 
             # Confusion Matrix & Classification Report
-            cm = confusion_matrix(y_test, best_y_pred)
+            cm = confusion_matrix(y_test, y_pred)
             cm_accuracy = cm.trace() / cm.sum() * 100
-
-            report = classification_report(y_test, best_y_pred, digits=2)
+            report = classification_report(y_test, y_pred, digits=2)
 
             self.output_text.config(state="normal")
             self.output_text.delete("1.0", tk.END)
@@ -129,5 +116,5 @@ class KNNPerformanceWindow:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = KNNPerformanceWindow(root)
+    app = NaiveBayesPerformanceWindow(root)
     root.mainloop()
