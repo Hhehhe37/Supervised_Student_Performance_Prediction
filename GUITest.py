@@ -5,6 +5,7 @@ from DataPreprocessing.Check_Missing import CheckMissingWindow
 from KNN_performance_measure import KNNPerformanceWindow
 from DecisionTree_performance_measure import DecisionTreePerformanceWindow
 from NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
+from SVM_performance_measure import SVMPerformanceWindow
 
 class MissingValueApp:
     def __init__(self, root):
@@ -119,6 +120,10 @@ class MissingValueApp:
     def open_dtree_prediction_window(self):
         dtree_window = tk.Toplevel(self.root)
         DecisionTreePerformanceWindow(dtree_window)
+
+    def open_svm_prediction_window(self):
+        svm_window = tk.Toplevel(self.root)
+        SVMPerformanceWindow(svm_window)
 
     # Placeholder methods for additional buttons
     def open_model_comparison_window(self):

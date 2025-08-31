@@ -5,12 +5,14 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import time
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, precision_score, recall_score, f1_score
 
 OUTPUT_FOLDER = "CSV_Files"
@@ -18,21 +20,72 @@ OUTPUT_FOLDER = "CSV_Files"
 class ModelComparisonWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("📊 Model Performance Comparison")
-        self.root.geometry("1400x900")
+        self.root.title("📊 Advanced Model Performance Comparison")
+        self.root.geometry("1500x1000")
         self.root.configure(bg="#f5f7fa")
 
         self.results = {}  # Store all model results
         self.best_model_info = {}  # Store best model for each metric
 
         # Title
-        title_label = tk.Label(root, text="🏆 Model Performance Comparison", 
+        title_label = tk.Label(root, text="🏆 Advanced Model Performance Comparison", 
                                font=("Segoe UI", 20, "bold"), bg="#f5f7fa", fg="#222")
         title_label.pack(pady=15)
 
-        # Run Comparison Button
-        self.compare_button = ttk.Button(root, text="🚀 Run Model Comparison", command=self.run_comparison)
-        self.compare_button.pack(pady=10)
+        # Configuration Frame
+        config_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
+        config_frame.pack(pady=10, padx=20, fill=tk.X)
+        
+        config_label = tk.Label(config_frame, text="Configuration Settings", font=("Segoe UI", 14, "bold"), 
+                               bg="#ffffff", fg="#333")
+        config_label.pack(anchor="w", padx=10, pady=5)
+
+        # Feature selection
+        feature_frame = tk.Frame(config_frame, bg="#ffffff")
+        feature_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        tk.Label(feature_frame, text="Number of top features (or 'all'):", 
+                 font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
+        
+        self.top_k_entry = tk.Entry(feature_frame, font=("Segoe UI", 11), width=10)
+        self.top_k_entry.pack(side=tk.LEFT, padx=10)
+        self.top_k_entry.insert(0, "all")
+
+        # Model selection checkboxes
+        models_frame = tk.Frame(config_frame, bg="#ffffff")
+        models_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        tk.Label(models_frame, text="Models to compare:", 
+                 font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
+        
+        self.model_vars = {
+            'KNN': tk.BooleanVar(value=True),
+            'Naive Bayes': tk.BooleanVar(value=True),
+            'Decision Tree': tk.BooleanVar(value=True),
+            'SVM': tk.BooleanVar(value=True)
+        }
+        
+        for model_name, var in self.model_vars.items():
+            cb = tk.Checkbutton(models_frame, text=model_name, variable=var, 
+                               font=("Segoe UI", 10), bg="#ffffff")
+            cb.pack(side=tk.LEFT, padx=10)
+
+        # Run Comparison Button and Progress
+        button_frame = tk.Frame(root, bg="#f5f7fa")
+        button_frame.pack(pady=10)
+        
+        self.compare_button = ttk.Button(button_frame, text="🚀 Run Advanced Model Comparison", 
+                                        command=self.run_comparison)
+        self.compare_button.pack(pady=5)
+
+        # Progress bar
+        self.progress = ttk.Progressbar(button_frame, length=400, mode='determinate')
+        self.progress.pack(pady=5)
+
+        # Status label
+        self.status_label = tk.Label(button_frame, text="Ready to run comparison", 
+                                     font=("Segoe UI", 10), bg="#f5f7fa", fg="#666")
+        self.status_label.pack(pady=2)
 
         # Create notebook for tabs
         self.notebook = ttk.Notebook(root)
@@ -50,25 +103,34 @@ class ModelComparisonWindow:
         # Tab 4: Visualization
         self.create_visualization_tab()
 
+        # Tab 5: Training Performance
+        self.create_performance_tab()
+
     def create_comparison_tab(self):
         """Create the main comparison table tab"""
         self.tab1 = tk.Frame(self.notebook, bg="#ffffff")
         self.notebook.add(self.tab1, text="📊 Model Comparison")
 
         # Comparison Table
-        columns = ("Model", "Accuracy (%)", "Precision", "Recall", "F1-Score", "Best Parameter", "Overall Rank")
+        columns = ("Model", "Accuracy (%)", "Precision", "Recall", "F1-Score", 
+                  "Best Parameter", "Train Time (s)", "Overall Rank")
         self.comparison_tree = ttk.Treeview(self.tab1, columns=columns, show="headings", height=10)
+        
+        column_widths = {
+            "Model": 120, "Accuracy (%)": 100, "Precision": 100, "Recall": 100,
+            "F1-Score": 100, "Best Parameter": 150, "Train Time (s)": 110, "Overall Rank": 120
+        }
         
         for col in columns:
             self.comparison_tree.heading(col, text=col)
-            if col == "Model":
-                self.comparison_tree.column(col, anchor="center", width=120)
-            elif col == "Best Parameter":
-                self.comparison_tree.column(col, anchor="center", width=120)
-            else:
-                self.comparison_tree.column(col, anchor="center", width=100)
+            self.comparison_tree.column(col, anchor="center", width=column_widths.get(col, 100))
 
         self.comparison_tree.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+
+        # Add scrollbar
+        scrollbar_comp = ttk.Scrollbar(self.tab1, orient="vertical", command=self.comparison_tree.yview)
+        scrollbar_comp.pack(side=tk.RIGHT, fill=tk.Y)
+        self.comparison_tree.configure(yscrollcommand=scrollbar_comp.set)
 
         # Winner labels frame
         self.winners_frame = tk.Frame(self.tab1, bg="#ffffff")
@@ -90,7 +152,7 @@ class ModelComparisonWindow:
         self.notebook.add(self.tab2, text="🥇 Best Model Analysis")
 
         # Best model summary
-        self.best_model_text = tk.Text(self.tab2, height=15, font=("Segoe UI", 11), wrap="word")
+        self.best_model_text = tk.Text(self.tab2, height=30, font=("Segoe UI", 11), wrap="word")
         scrollbar_best = ttk.Scrollbar(self.tab2, command=self.best_model_text.yview)
         self.best_model_text.config(yscrollcommand=scrollbar_best.set)
         
@@ -118,21 +180,75 @@ class ModelComparisonWindow:
         self.notebook.add(self.tab4, text="📈 Visualization")
 
         # Create matplotlib figure
-        self.fig, ((self.ax1, self.ax2), (self.ax3, self.ax4)) = plt.subplots(2, 2, figsize=(14, 10))
-        self.fig.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold')
+        self.fig, ((self.ax1, self.ax2), (self.ax3, self.ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+        self.fig.suptitle('Advanced Model Performance Analysis', fontsize=16, fontweight='bold')
         
         self.canvas = FigureCanvasTkAgg(self.fig, self.tab4)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+    def create_performance_tab(self):
+        """Create training performance analysis tab"""
+        self.tab5 = tk.Frame(self.notebook, bg="#ffffff")
+        self.notebook.add(self.tab5, text="⚡ Training Performance")
+
+        # Performance analysis text
+        self.performance_text = tk.Text(self.tab5, height=30, font=("Courier New", 11), wrap="word")
+        scrollbar_perf = ttk.Scrollbar(self.tab5, command=self.performance_text.yview)
+        self.performance_text.config(yscrollcommand=scrollbar_perf.set)
+        
+        self.performance_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        scrollbar_perf.pack(side=tk.RIGHT, fill=tk.Y)
+        self.performance_text.config(state="disabled")
+
+    def update_status(self, message):
+        """Update status label"""
+        self.status_label.config(text=message)
+        self.root.update()
+
     def run_comparison(self):
-        """Run comparison between all models"""
+        """Run comparison between selected models with optimizations"""
         try:
+            # Disable button during evaluation
+            self.compare_button.config(state="disabled")
+            
+            # Get selected models
+            selected_models = [model for model, var in self.model_vars.items() if var.get()]
+            if not selected_models:
+                messagebox.showwarning("Warning", "Please select at least one model to compare.")
+                return
+
+            total_models = len(selected_models)
+            self.progress['maximum'] = total_models * 100
+
             # Load data
+            self.update_status("Loading and preparing data...")
             file_path = os.path.join(OUTPUT_FOLDER, "FilteredStudentPerformance.csv")
             df = pd.read_csv(file_path)
 
-            X = df.drop("GradeClass", axis=1)
-            y = df["GradeClass"]
+            # Feature selection
+            user_input = self.top_k_entry.get().strip().lower()
+            if user_input == "all" or user_input == "":
+                k = None
+            else:
+                try:
+                    k = int(user_input)
+                except ValueError:
+                    k = None
+
+            # Calculate correlation and select features
+            correlations = df.corr(numeric_only=True)["GradeClass"].abs().sort_values(ascending=False)
+            correlations = correlations.drop(labels=["GradeClass"], errors='ignore')
+
+            if k is not None and k > 0:
+                top_features = correlations.head(k).index.tolist()
+            else:
+                top_features = correlations.index.tolist()
+
+            top_features.append("GradeClass")
+            df_filtered = df[top_features]
+
+            X = df_filtered.drop("GradeClass", axis=1)
+            y = df_filtered["GradeClass"]
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -141,38 +257,71 @@ class ModelComparisonWindow:
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
 
-            # Test different models
+            # Initialize results
             self.results = {}
+            current_model = 0
 
-            # 1. KNN (find best k)
-            self.evaluate_knn(X_train_scaled, X_test_scaled, y_train, y_test)
-            
-            # 2. Naive Bayes
-            self.evaluate_naive_bayes(X_train_scaled, X_test_scaled, y_train, y_test)
-            
-            # 3. Decision Tree
-            self.evaluate_decision_tree(X_train, X_test, y_train, y_test)
+            # Test selected models with optimizations
+            if 'KNN' in selected_models:
+                current_model += 1
+                self.progress['value'] = (current_model - 1) * 100
+                self.update_status(f"Optimizing KNN ({current_model}/{total_models})...")
+                self.evaluate_knn_optimized(X_train_scaled, X_test_scaled, y_train, y_test)
+                self.progress['value'] = current_model * 100
 
-            # Find best models for each metric
+            if 'Naive Bayes' in selected_models:
+                current_model += 1
+                self.progress['value'] = (current_model - 1) * 100
+                self.update_status(f"Evaluating Naive Bayes ({current_model}/{total_models})...")
+                self.evaluate_naive_bayes(X_train_scaled, X_test_scaled, y_train, y_test)
+                self.progress['value'] = current_model * 100
+
+            if 'Decision Tree' in selected_models:
+                current_model += 1
+                self.progress['value'] = (current_model - 1) * 100
+                self.update_status(f"Optimizing Decision Tree ({current_model}/{total_models})...")
+                self.evaluate_decision_tree_optimized(X_train, X_test, y_train, y_test)
+                self.progress['value'] = current_model * 100
+
+            if 'SVM' in selected_models:
+                current_model += 1
+                self.progress['value'] = (current_model - 1) * 100
+                self.update_status(f"Optimizing SVM ({current_model}/{total_models})...")
+                self.evaluate_svm_optimized(X_train_scaled, X_test_scaled, y_train, y_test)
+                self.progress['value'] = current_model * 100
+
+            # Find best models
+            self.update_status("Analyzing results...")
             self.find_best_models()
 
-            # Update displays
+            # Update all displays
             self.update_comparison_table()
-            self.update_best_model_analysis()
+            self.update_best_model_analysis(len(top_features) - 1)
             self.update_detailed_metrics()
             self.update_visualization()
+            self.update_performance_analysis()
+
+            self.update_status(f"Comparison completed! Analyzed {len(selected_models)} models.")
 
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
+        finally:
+            # Re-enable button
+            self.compare_button.config(state="normal")
+            self.progress['value'] = self.progress['maximum']
 
-    def evaluate_knn(self, X_train, X_test, y_train, y_test):
-        """Evaluate KNN with different k values"""
+    def evaluate_knn_optimized(self, X_train, X_test, y_train, y_test):
+        """Evaluate KNN with k optimization (1-20)"""
         best_k, best_accuracy = 1, 0
         best_y_pred = None
+        best_train_time = 0
 
         for k in range(1, 21):
+            start_time = time.time()
             knn = KNeighborsClassifier(n_neighbors=k)
             knn.fit(X_train, y_train)
+            train_time = time.time() - start_time
+            
             y_pred = knn.predict(X_test)
             accuracy = accuracy_score(y_test, y_pred)
             
@@ -180,8 +329,9 @@ class ModelComparisonWindow:
                 best_accuracy = accuracy
                 best_k = k
                 best_y_pred = y_pred
+                best_train_time = train_time
 
-        # Calculate metrics for best k
+        # Calculate all metrics for best k
         precision = precision_score(y_test, best_y_pred, average='weighted')
         recall = recall_score(y_test, best_y_pred, average='weighted')
         f1 = f1_score(y_test, best_y_pred, average='weighted')
@@ -192,16 +342,21 @@ class ModelComparisonWindow:
             'recall': recall,
             'f1_score': f1,
             'best_param': f"k={best_k}",
+            'train_time': best_train_time,
             'y_pred': best_y_pred,
             'y_test': y_test,
             'confusion_matrix': confusion_matrix(y_test, best_y_pred),
-            'classification_report': classification_report(y_test, best_y_pred)
+            'classification_report': classification_report(y_test, best_y_pred),
+            'model_specific': {'neighbors': best_k, 'total_tested': 20}
         }
 
     def evaluate_naive_bayes(self, X_train, X_test, y_train, y_test):
         """Evaluate Naive Bayes"""
+        start_time = time.time()
         nb = GaussianNB()
         nb.fit(X_train, y_train)
+        train_time = time.time() - start_time
+        
         y_pred = nb.predict(X_test)
 
         accuracy = accuracy_score(y_test, y_pred)
@@ -214,34 +369,177 @@ class ModelComparisonWindow:
             'precision': precision,
             'recall': recall,
             'f1_score': f1,
-            'best_param': "Default",
+            'best_param': "Gaussian",
+            'train_time': train_time,
             'y_pred': y_pred,
             'y_test': y_test,
             'confusion_matrix': confusion_matrix(y_test, y_pred),
-            'classification_report': classification_report(y_test, y_pred)
+            'classification_report': classification_report(y_test, y_pred),
+            'model_specific': {'algorithm': 'Gaussian', 'assumptions': 'Features are independent'}
         }
 
-    def evaluate_decision_tree(self, X_train, X_test, y_train, y_test):
-        """Evaluate Decision Tree"""
-        dt = DecisionTreeClassifier(random_state=42)
-        dt.fit(X_train, y_train)
-        y_pred = dt.predict(X_test)
+    def evaluate_decision_tree_optimized(self, X_train, X_test, y_train, y_test):
+        """Evaluate Decision Tree with hyperparameter optimization"""
+        max_depths = [3, 5, 7, 10, 15, None]
+        min_samples_splits = [2, 5, 10]
+        min_samples_leafs = [1, 2, 5]
 
-        accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred, average='weighted')
-        recall = recall_score(y_test, y_pred, average='weighted')
-        f1 = f1_score(y_test, y_pred, average='weighted')
+        best_accuracy = 0
+        best_params = {}
+        best_y_pred = None
+        best_train_time = 0
+        best_dt = None
+
+        for max_depth in max_depths:
+            for min_samples_split in min_samples_splits:
+                for min_samples_leaf in min_samples_leafs:
+                    start_time = time.time()
+                    dt = DecisionTreeClassifier(
+                        max_depth=max_depth,
+                        min_samples_split=min_samples_split,
+                        min_samples_leaf=min_samples_leaf,
+                        random_state=42
+                    )
+                    
+                    dt.fit(X_train, y_train)
+                    train_time = time.time() - start_time
+                    
+                    y_pred = dt.predict(X_test)
+                    accuracy = accuracy_score(y_test, y_pred)
+                    
+                    if accuracy > best_accuracy:
+                        best_accuracy = accuracy
+                        best_params = {
+                            'max_depth': max_depth,
+                            'min_samples_split': min_samples_split,
+                            'min_samples_leaf': min_samples_leaf
+                        }
+                        best_y_pred = y_pred
+                        best_train_time = train_time
+                        best_dt = dt
+
+        precision = precision_score(y_test, best_y_pred, average='weighted')
+        recall = recall_score(y_test, best_y_pred, average='weighted')
+        f1 = f1_score(y_test, best_y_pred, average='weighted')
+
+        param_str = f"depth={best_params['max_depth']}, split={best_params['min_samples_split']}"
 
         self.results['Decision Tree'] = {
-            'accuracy': accuracy * 100,
+            'accuracy': best_accuracy * 100,
             'precision': precision,
             'recall': recall,
             'f1_score': f1,
-            'best_param': "Default",
-            'y_pred': y_pred,
+            'best_param': param_str,
+            'train_time': best_train_time,
+            'y_pred': best_y_pred,
             'y_test': y_test,
-            'confusion_matrix': confusion_matrix(y_test, y_pred),
-            'classification_report': classification_report(y_test, y_pred)
+            'confusion_matrix': confusion_matrix(y_test, best_y_pred),
+            'classification_report': classification_report(y_test, best_y_pred),
+            'model_specific': {
+                'params': best_params,
+                'n_nodes': best_dt.tree_.node_count,
+                'n_leaves': best_dt.tree_.n_leaves,
+                'max_depth_actual': best_dt.tree_.max_depth
+            }
+        }
+
+    def evaluate_svm_optimized(self, X_train, X_test, y_train, y_test):
+        """Evaluate SVM with kernel and parameter optimization"""
+        kernels = ['linear', 'rbf', 'poly']
+        param_grids = {
+            'linear': {'C': [0.1, 1, 10]},
+            'rbf': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto', 0.01]},
+            'poly': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto'], 'degree': [2, 3]}
+        }
+
+        best_accuracy = 0
+        best_params = {}
+        best_y_pred = None
+        best_train_time = 0
+        best_svm = None
+
+        for kernel in kernels:
+            if kernel == 'linear':
+                for C in param_grids[kernel]['C']:
+                    start_time = time.time()
+                    svm = SVC(kernel=kernel, C=C, random_state=42)
+                    svm.fit(X_train, y_train)
+                    train_time = time.time() - start_time
+                    
+                    y_pred = svm.predict(X_test)
+                    accuracy = accuracy_score(y_test, y_pred)
+                    
+                    if accuracy > best_accuracy:
+                        best_accuracy = accuracy
+                        best_params = {'kernel': kernel, 'C': C}
+                        best_y_pred = y_pred
+                        best_train_time = train_time
+                        best_svm = svm
+            
+            elif kernel == 'rbf':
+                for C in param_grids[kernel]['C']:
+                    for gamma in param_grids[kernel]['gamma']:
+                        start_time = time.time()
+                        svm = SVC(kernel=kernel, C=C, gamma=gamma, random_state=42)
+                        svm.fit(X_train, y_train)
+                        train_time = time.time() - start_time
+                        
+                        y_pred = svm.predict(X_test)
+                        accuracy = accuracy_score(y_test, y_pred)
+                        
+                        if accuracy > best_accuracy:
+                            best_accuracy = accuracy
+                            best_params = {'kernel': kernel, 'C': C, 'gamma': gamma}
+                            best_y_pred = y_pred
+                            best_train_time = train_time
+                            best_svm = svm
+            
+            elif kernel == 'poly':
+                for C in param_grids[kernel]['C']:
+                    for gamma in param_grids[kernel]['gamma']:
+                        for degree in param_grids[kernel]['degree']:
+                            start_time = time.time()
+                            svm = SVC(kernel=kernel, C=C, gamma=gamma, degree=degree, random_state=42)
+                            svm.fit(X_train, y_train)
+                            train_time = time.time() - start_time
+                            
+                            y_pred = svm.predict(X_test)
+                            accuracy = accuracy_score(y_test, y_pred)
+                            
+                            if accuracy > best_accuracy:
+                                best_accuracy = accuracy
+                                best_params = {'kernel': kernel, 'C': C, 'gamma': gamma, 'degree': degree}
+                                best_y_pred = y_pred
+                                best_train_time = train_time
+                                best_svm = svm
+
+        precision = precision_score(y_test, best_y_pred, average='weighted')
+        recall = recall_score(y_test, best_y_pred, average='weighted')
+        f1 = f1_score(y_test, best_y_pred, average='weighted')
+
+        # Create parameter string
+        param_items = []
+        for key, value in best_params.items():
+            if key != 'kernel':
+                param_items.append(f"{key}={value}")
+        param_str = f"{best_params['kernel']} ({', '.join(param_items)})"
+
+        self.results['SVM'] = {
+            'accuracy': best_accuracy * 100,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1,
+            'best_param': param_str,
+            'train_time': best_train_time,
+            'y_pred': best_y_pred,
+            'y_test': y_test,
+            'confusion_matrix': confusion_matrix(y_test, best_y_pred),
+            'classification_report': classification_report(y_test, best_y_pred),
+            'model_specific': {
+                'params': best_params,
+                'support_vectors': best_svm.n_support_,
+                'total_support_vectors': sum(best_svm.n_support_)
+            }
         }
 
     def find_best_models(self):
@@ -255,6 +553,7 @@ class ModelComparisonWindow:
             'precision': {'model': '', 'score': 0},
             'recall': {'model': '', 'score': 0},
             'f1_score': {'model': '', 'score': 0},
+            'speed': {'model': '', 'score': float('inf')},
             'overall': {'model': '', 'score': 0}
         }
         
@@ -271,17 +570,25 @@ class ModelComparisonWindow:
             
             if metrics['f1_score'] > self.best_model_info['f1_score']['score']:
                 self.best_model_info['f1_score'] = {'model': model, 'score': metrics['f1_score']}
+            
+            if metrics['train_time'] < self.best_model_info['speed']['score']:
+                self.best_model_info['speed'] = {'model': model, 'score': metrics['train_time']}
         
         # Calculate overall best (weighted average of all metrics)
         for model, metrics in self.results.items():
-            # Normalize accuracy to 0-1 scale for fair comparison
+            # Normalize metrics for fair comparison
             normalized_accuracy = metrics['accuracy'] / 100
             
-            # Calculate weighted average (you can adjust weights based on importance)
-            overall_score = (normalized_accuracy * 0.3 + 
+            # Speed score (inverse of time, normalized)
+            max_time = max(self.results[m]['train_time'] for m in self.results)
+            speed_score = (max_time - metrics['train_time']) / max_time if max_time > 0 else 0
+            
+            # Calculate weighted overall score
+            overall_score = (normalized_accuracy * 0.35 + 
                            metrics['precision'] * 0.25 + 
                            metrics['recall'] * 0.25 + 
-                           metrics['f1_score'] * 0.2)
+                           metrics['f1_score'] * 0.1 + 
+                           speed_score * 0.05)  # Speed has small weight
             
             if overall_score > self.best_model_info['overall']['score']:
                 self.best_model_info['overall'] = {'model': model, 'score': overall_score}
@@ -300,15 +607,21 @@ class ModelComparisonWindow:
             best_count += 1
         if self.best_model_info['f1_score']['model'] == model:
             best_count += 1
+        if self.best_model_info['speed']['model'] == model:
+            best_count += 1
         
         # Calculate average rank (lower is better)
         ranks = []
-        for metric in ['accuracy', 'precision', 'recall', 'f1_score']:
-            metric_key = metric if metric != 'accuracy' else 'accuracy'
+        metric_keys = ['accuracy', 'precision', 'recall', 'f1_score']
+        for metric in metric_keys:
             sorted_models = sorted(self.results.keys(), 
-                                 key=lambda x: self.results[x][metric_key] if metric_key != 'accuracy' 
-                                 else self.results[x]['accuracy'], reverse=True)
+                                 key=lambda x: self.results[x][metric], reverse=True)
             ranks.append(sorted_models.index(model) + 1)
+        
+        # Add speed rank (lower time = better rank)
+        speed_sorted = sorted(self.results.keys(), 
+                             key=lambda x: self.results[x]['train_time'])
+        ranks.append(speed_sorted.index(model) + 1)
         
         avg_rank = sum(ranks) / len(ranks)
         return avg_rank, best_count
@@ -332,6 +645,7 @@ class ModelComparisonWindow:
                 f"{metrics['recall']:.3f}",
                 f"{metrics['f1_score']:.3f}",
                 metrics['best_param'],
+                f"{metrics['train_time']:.4f}",
                 f"#{int(avg_rank)} ({best_count} wins)"
             ))
 
@@ -343,66 +657,148 @@ class ModelComparisonWindow:
         )
 
         # Individual metric winners
-        winners_text = (f"📊 Best by Accuracy: {self.best_model_info['accuracy']['model']} "
+        winners_text = (f"📊 Best Accuracy: {self.best_model_info['accuracy']['model']} "
                        f"({self.best_model_info['accuracy']['score']:.2f}%)\n"
-                       f"🎯 Best by Precision: {self.best_model_info['precision']['model']} "
+                       f"🎯 Best Precision: {self.best_model_info['precision']['model']} "
                        f"({self.best_model_info['precision']['score']:.3f})\n"
-                       f"📈 Best by Recall: {self.best_model_info['recall']['model']} "
+                       f"📈 Best Recall: {self.best_model_info['recall']['model']} "
                        f"({self.best_model_info['recall']['score']:.3f})\n"
-                       f"⚖️ Best by F1-Score: {self.best_model_info['f1_score']['model']} "
-                       f"({self.best_model_info['f1_score']['score']:.3f})")
+                       f"⚖️ Best F1-Score: {self.best_model_info['f1_score']['model']} "
+                       f"({self.best_model_info['f1_score']['score']:.3f})\n"
+                       f"⚡ Fastest Training: {self.best_model_info['speed']['model']} "
+                       f"({self.best_model_info['speed']['score']:.4f}s)")
         self.metric_winners_label.config(text=winners_text)
 
-    def update_best_model_analysis(self):
+    def update_best_model_analysis(self, num_features):
         """Update best model analysis"""
         self.best_model_text.config(state="normal")
         self.best_model_text.delete("1.0", tk.END)
 
+        if not self.results:
+            self.best_model_text.insert(tk.END, "No results available. Please run the comparison first.")
+            self.best_model_text.config(state="disabled")
+            return
+
         best_model = self.best_model_info['overall']['model']
         best_metrics = self.results[best_model]
 
-        analysis = f"""🏆 BEST OVERALL MODEL ANALYSIS
-{'='*60}
+        analysis = f"""🏆 COMPREHENSIVE BEST MODEL ANALYSIS
+{'='*80}
 
-Model: {best_model}
-Overall Score: {self.best_model_info['overall']['score']:.3f}
-Best Parameter: {best_metrics['best_param']}
+🥇 OVERALL WINNER: {best_model}
+Overall Performance Score: {self.best_model_info['overall']['score']:.4f}
+Features Used: {num_features}
+Best Configuration: {best_metrics['best_param']}
 
-PERFORMANCE METRICS:
-• Accuracy: {best_metrics['accuracy']:.2f}%
-• Precision: {best_metrics['precision']:.3f}
-• Recall: {best_metrics['recall']:.3f}
-• F1-Score: {best_metrics['f1_score']:.3f}
+📊 PERFORMANCE METRICS:
+• Accuracy: {best_metrics['accuracy']:.2f}% 
+• Precision: {best_metrics['precision']:.4f}
+• Recall: {best_metrics['recall']:.4f}  
+• F1-Score: {best_metrics['f1_score']:.4f}
+• Training Time: {best_metrics['train_time']:.4f} seconds
 
-WHY THIS MODEL IS BEST:
+🎯 WHY THIS MODEL IS THE OVERALL WINNER:
 """
 
         # Analyze why this model is best
         wins = []
         if self.best_model_info['accuracy']['model'] == best_model:
-            wins.append("✓ Highest Accuracy")
+            wins.append("✅ Achieves highest accuracy")
         if self.best_model_info['precision']['model'] == best_model:
-            wins.append("✓ Highest Precision")
+            wins.append("✅ Achieves highest precision")
         if self.best_model_info['recall']['model'] == best_model:
-            wins.append("✓ Highest Recall")
+            wins.append("✅ Achieves highest recall")
         if self.best_model_info['f1_score']['model'] == best_model:
-            wins.append("✓ Highest F1-Score")
+            wins.append("✅ Achieves highest F1-score")
+        if self.best_model_info['speed']['model'] == best_model:
+            wins.append("✅ Fastest training time")
 
         if wins:
             analysis += "\n".join(wins) + "\n\n"
         else:
-            analysis += "• Best balanced performance across all metrics\n\n"
+            analysis += "• Provides the best balanced performance across all evaluation metrics\n\n"
 
-        analysis += f"""DETAILED CLASSIFICATION REPORT:
-{best_metrics['classification_report']}
+        # Model-specific insights
+        analysis += f"🔍 MODEL-SPECIFIC INSIGHTS ({best_model}):\n"
+        if best_model == 'KNN':
+            specific = best_metrics['model_specific']
+            analysis += f"• Optimal number of neighbors: {specific['neighbors']}\n"
+            analysis += f"• Tested {specific['total_tested']} different k values\n"
+            analysis += f"• Instance-based learning: Makes predictions based on similarity to training data\n"
+            analysis += f"• Works well when local patterns in data are important\n\n"
+        
+        elif best_model == 'Naive Bayes':
+            specific = best_metrics['model_specific']
+            analysis += f"• Algorithm type: {specific['algorithm']}\n"
+            analysis += f"• Key assumption: {specific['assumptions']}\n"
+            analysis += f"• Probabilistic model: Uses Bayes' theorem for predictions\n"
+            analysis += f"• Excellent performance despite simplicity\n\n"
+        
+        elif best_model == 'Decision Tree':
+            specific = best_metrics['model_specific']
+            analysis += f"• Max depth: {specific['params']['max_depth']}\n"
+            analysis += f"• Min samples to split: {specific['params']['min_samples_split']}\n"
+            analysis += f"• Min samples per leaf: {specific['params']['min_samples_leaf']}\n"
+            analysis += f"• Tree complexity: {specific['n_nodes']} nodes, {specific['n_leaves']} leaves\n"
+            analysis += f"• Actual max depth reached: {specific['max_depth_actual']}\n"
+            analysis += f"• Interpretable model: Easy to understand decision rules\n\n"
+        
+        elif best_model == 'SVM':
+            specific = best_metrics['model_specific']
+            analysis += f"• Kernel configuration: {specific['params']}\n"
+            analysis += f"• Support vectors per class: {list(specific['support_vectors'])}\n"
+            analysis += f"• Total support vectors: {specific['total_support_vectors']}\n"
+            analysis += f"• Margin maximization: Finds optimal decision boundary\n"
+            analysis += f"• Strong generalization: Works well with high-dimensional data\n\n"
 
-CONFUSION MATRIX:
-{best_metrics['confusion_matrix']}
+        # Performance comparison
+        analysis += f"📈 PERFORMANCE COMPARISON WITH OTHER MODELS:\n"
+        analysis += "-" * 60 + "\n"
+        
+        # Sort models by overall performance
+        sorted_models = sorted(self.results.items(), 
+                             key=lambda x: self.best_model_info['overall']['score'] 
+                             if self.best_model_info['overall']['model'] == x[0] else 
+                             (x[1]['accuracy']/100 * 0.35 + x[1]['precision'] * 0.25 + 
+                              x[1]['recall'] * 0.25 + x[1]['f1_score'] * 0.2), 
+                             reverse=True)
 
-RECOMMENDATION:
-Use {best_model} with parameter {best_metrics['best_param']} for your student performance prediction task.
-This model provides the best balance of accuracy, precision, recall, and F1-score.
-"""
+        for i, (model, metrics) in enumerate(sorted_models, 1):
+            rank_indicator = "👑" if i == 1 else f"{i}."
+            analysis += f"{rank_indicator} {model:<15}: "
+            analysis += f"Acc={metrics['accuracy']:.1f}%, "
+            analysis += f"Prec={metrics['precision']:.3f}, "
+            analysis += f"Rec={metrics['recall']:.3f}, "
+            analysis += f"F1={metrics['f1_score']:.3f}, "
+            analysis += f"Time={metrics['train_time']:.4f}s\n"
+
+        analysis += f"\n📋 DETAILED CLASSIFICATION REPORT:\n"
+        analysis += "=" * 60 + "\n"
+        analysis += f"{best_metrics['classification_report']}\n"
+
+        analysis += f"📊 CONFUSION MATRIX:\n"
+        analysis += f"{best_metrics['confusion_matrix']}\n\n"
+
+        analysis += f"🎯 FINAL RECOMMENDATION:\n"
+        analysis += "=" * 60 + "\n"
+        analysis += f"Deploy {best_model} with configuration: {best_metrics['best_param']}\n\n"
+        
+        analysis += f"This model provides:\n"
+        if best_metrics['accuracy'] >= 90:
+            analysis += f"• Excellent accuracy ({best_metrics['accuracy']:.1f}%) for reliable predictions\n"
+        elif best_metrics['accuracy'] >= 80:
+            analysis += f"• Good accuracy ({best_metrics['accuracy']:.1f}%) suitable for most applications\n"
+        else:
+            analysis += f"• Moderate accuracy ({best_metrics['accuracy']:.1f}%) - consider feature engineering\n"
+        
+        if best_metrics['train_time'] < 0.01:
+            analysis += f"• Very fast training ({best_metrics['train_time']:.4f}s) - ideal for real-time applications\n"
+        elif best_metrics['train_time'] < 0.1:
+            analysis += f"• Fast training ({best_metrics['train_time']:.4f}s) - suitable for frequent retraining\n"
+        else:
+            analysis += f"• Moderate training time ({best_metrics['train_time']:.4f}s) - plan accordingly for retraining\n"
+        
+        analysis += f"• Balanced precision and recall for reliable classification across all classes\n"
 
         self.best_model_text.insert(tk.END, analysis)
         self.best_model_text.config(state="disabled")
@@ -412,28 +808,62 @@ This model provides the best balance of accuracy, precision, recall, and F1-scor
         self.detailed_text.config(state="normal")
         self.detailed_text.delete("1.0", tk.END)
 
+        if not self.results:
+            self.detailed_text.insert(tk.END, "No results available.")
+            self.detailed_text.config(state="disabled")
+            return
+
         # Sort models by overall performance
+        overall_scores = {}
+        for model, metrics in self.results.items():
+            if self.best_model_info['overall']['model'] == model:
+                overall_scores[model] = self.best_model_info['overall']['score']
+            else:
+                # Calculate score for non-best models
+                normalized_accuracy = metrics['accuracy'] / 100
+                max_time = max(self.results[m]['train_time'] for m in self.results)
+                speed_score = (max_time - metrics['train_time']) / max_time if max_time > 0 else 0
+                overall_scores[model] = (normalized_accuracy * 0.35 + 
+                                       metrics['precision'] * 0.25 + 
+                                       metrics['recall'] * 0.25 + 
+                                       metrics['f1_score'] * 0.1 + 
+                                       speed_score * 0.05)
+
         sorted_models = sorted(self.results.keys(), 
-                             key=lambda x: self.best_model_info['overall']['score'] 
-                             if self.best_model_info['overall']['model'] == x else 0, 
-                             reverse=True)
+                             key=lambda x: overall_scores[x], reverse=True)
 
         for i, model in enumerate(sorted_models, 1):
             metrics = self.results[model]
-            self.detailed_text.insert(tk.END, f"{'='*60}\n")
-            self.detailed_text.insert(tk.END, f"#{i} - {model} DETAILED RESULTS\n")
-            self.detailed_text.insert(tk.END, f"{'='*60}\n\n")
+            avg_rank, best_count = self.calculate_model_rank(model)
             
-            self.detailed_text.insert(tk.END, f"Accuracy: {metrics['accuracy']:.2f}%\n")
-            self.detailed_text.insert(tk.END, f"Precision: {metrics['precision']:.3f}\n")
-            self.detailed_text.insert(tk.END, f"Recall: {metrics['recall']:.3f}\n")
-            self.detailed_text.insert(tk.END, f"F1-Score: {metrics['f1_score']:.3f}\n")
-            self.detailed_text.insert(tk.END, f"Best Parameter: {metrics['best_param']}\n\n")
+            self.detailed_text.insert(tk.END, f"{'='*80}\n")
+            self.detailed_text.insert(tk.END, f"#{i} - {model} COMPREHENSIVE ANALYSIS\n")
+            self.detailed_text.insert(tk.END, f"{'='*80}\n\n")
             
-            self.detailed_text.insert(tk.END, "Confusion Matrix:\n")
+            # Performance metrics
+            self.detailed_text.insert(tk.END, f"📊 PERFORMANCE METRICS:\n")
+            self.detailed_text.insert(tk.END, f"• Accuracy: {metrics['accuracy']:.2f}%\n")
+            self.detailed_text.insert(tk.END, f"• Precision: {metrics['precision']:.4f}\n")
+            self.detailed_text.insert(tk.END, f"• Recall: {metrics['recall']:.4f}\n")
+            self.detailed_text.insert(tk.END, f"• F1-Score: {metrics['f1_score']:.4f}\n")
+            self.detailed_text.insert(tk.END, f"• Training Time: {metrics['train_time']:.4f} seconds\n")
+            self.detailed_text.insert(tk.END, f"• Overall Score: {overall_scores[model]:.4f}\n")
+            self.detailed_text.insert(tk.END, f"• Average Rank: {avg_rank:.1f}\n")
+            self.detailed_text.insert(tk.END, f"• Metrics Won: {best_count}/5\n\n")
+            
+            # Model configuration
+            self.detailed_text.insert(tk.END, f"⚙️ OPTIMAL CONFIGURATION:\n")
+            self.detailed_text.insert(tk.END, f"• Best Parameters: {metrics['best_param']}\n")
+            
+            # Model-specific details
+            if 'model_specific' in metrics:
+                specific = metrics['model_specific']
+                self.detailed_text.insert(tk.END, f"• Model Details: {specific}\n")
+            
+            self.detailed_text.insert(tk.END, f"\n📊 CONFUSION MATRIX:\n")
             self.detailed_text.insert(tk.END, f"{metrics['confusion_matrix']}\n\n")
             
-            self.detailed_text.insert(tk.END, "Classification Report:\n")
+            self.detailed_text.insert(tk.END, f"📈 DETAILED CLASSIFICATION REPORT:\n")
             self.detailed_text.insert(tk.END, f"{metrics['classification_report']}\n\n")
 
         self.detailed_text.config(state="disabled")
@@ -452,95 +882,233 @@ This model provides the best balance of accuracy, precision, recall, and F1-scor
         precisions = [self.results[model]['precision'] for model in models]
         recalls = [self.results[model]['recall'] for model in models]
         f1_scores = [self.results[model]['f1_score'] for model in models]
+        train_times = [self.results[model]['train_time'] for model in models]
 
-        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
-        # 1. All Metrics Comparison
+        # 1. All Metrics Comparison (Radar-like)
         x = np.arange(len(models))
-        width = 0.2
+        width = 0.18
         
-        self.ax1.bar(x - 1.5*width, [acc/100 for acc in accuracies], width, label='Accuracy', color=colors[0], alpha=0.8)
-        self.ax1.bar(x - 0.5*width, precisions, width, label='Precision', color=colors[1], alpha=0.8)
-        self.ax1.bar(x + 0.5*width, recalls, width, label='Recall', color=colors[2], alpha=0.8)
-        self.ax1.bar(x + 1.5*width, f1_scores, width, label='F1-Score', color=colors[3], alpha=0.8)
+        bars1 = self.ax1.bar(x - 1.5*width, [acc/100 for acc in accuracies], width, 
+                            label='Accuracy', color=colors[0], alpha=0.8)
+        bars2 = self.ax1.bar(x - 0.5*width, precisions, width, 
+                            label='Precision', color=colors[1], alpha=0.8)
+        bars3 = self.ax1.bar(x + 0.5*width, recalls, width, 
+                            label='Recall', color=colors[2], alpha=0.8)
+        bars4 = self.ax1.bar(x + 1.5*width, f1_scores, width, 
+                            label='F1-Score', color=colors[3], alpha=0.8)
         
-        self.ax1.set_title('All Metrics Comparison')
-        self.ax1.set_ylabel('Score')
+        self.ax1.set_title('Performance Metrics Comparison', fontsize=12, fontweight='bold')
+        self.ax1.set_ylabel('Score', fontsize=10)
         self.ax1.set_xticks(x)
-        self.ax1.set_xticklabels(models)
-        self.ax1.legend()
+        self.ax1.set_xticklabels(models, rotation=45, ha='right')
+        self.ax1.legend(fontsize=9)
         self.ax1.set_ylim(0, 1)
+        self.ax1.grid(True, alpha=0.3)
         
-        # Highlight best performers
+        # Add value labels on bars
+        for bars in [bars1, bars2, bars3, bars4]:
+            for bar in bars:
+                height = bar.get_height()
+                self.ax1.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                             f'{height:.2f}', ha='center', va='bottom', fontsize=8)
+
+        # Highlight best overall performer
         best_model = self.best_model_info['overall']['model']
         best_idx = models.index(best_model)
         self.ax1.axvline(x=best_idx, color='gold', linestyle='--', alpha=0.7, linewidth=2)
 
-        # 2. Model Rankings
-        ranks = []
-        for model in models:
-            avg_rank, _ = self.calculate_model_rank(model)
-            ranks.append(avg_rank)
-        
-        bars = self.ax2.bar(models, ranks, color=colors[:len(models)])
-        self.ax2.set_title('Model Rankings (Lower is Better)')
-        self.ax2.set_ylabel('Average Rank')
-        self.ax2.invert_yaxis()  # Lower ranks at top
+        # 2. Training Time Comparison
+        bars = self.ax2.bar(models, train_times, color=colors[:len(models)], alpha=0.8)
+        self.ax2.set_title('Training Time Comparison', fontsize=12, fontweight='bold')
+        self.ax2.set_ylabel('Training Time (seconds)', fontsize=10)
+        self.ax2.tick_params(axis='x', rotation=45)
         
         # Add value labels
-        for bar, rank in zip(bars, ranks):
+        for bar, time_val in zip(bars, train_times):
             height = bar.get_height()
-            self.ax2.text(bar.get_x() + bar.get_width()/2., height,
-                         f'{rank:.1f}', ha='center', va='bottom')
+            self.ax2.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
+                         f'{time_val:.4f}s', ha='center', va='bottom', fontsize=9)
+        
+        # Highlight fastest
+        fastest_model = self.best_model_info['speed']['model']
+        fastest_idx = models.index(fastest_model)
+        bars[fastest_idx].set_color('lightgreen')
+        bars[fastest_idx].set_alpha(1.0)
 
         # 3. Confusion Matrix for best model
         best_model = self.best_model_info['overall']['model']
         cm = self.results[best_model]['confusion_matrix']
         
         im = self.ax3.imshow(cm, interpolation='nearest', cmap='Blues')
-        self.ax3.set_title(f'Confusion Matrix - {best_model} (Best Overall)')
+        self.ax3.set_title(f'Confusion Matrix - {best_model}\n(Best Overall Model)', 
+                          fontsize=11, fontweight='bold')
         
         # Add text annotations
         thresh = cm.max() / 2.
         for i in range(cm.shape[0]):
             for j in range(cm.shape[1]):
                 self.ax3.text(j, i, format(cm[i, j], 'd'),
-                             ha="center", va="center",
+                             ha="center", va="center", fontsize=10,
                              color="white" if cm[i, j] > thresh else "black")
         
-        self.ax3.set_xlabel('Predicted Label')
-        self.ax3.set_ylabel('True Label')
+        self.ax3.set_xlabel('Predicted Label', fontsize=10)
+        self.ax3.set_ylabel('True Label', fontsize=10)
 
-        # 4. Metric Winners Chart
-        metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
-        winner_counts = {}
-        
+        # 4. Performance Rankings
+        ranks = []
         for model in models:
-            winner_counts[model] = 0
-            if self.best_model_info['accuracy']['model'] == model:
-                winner_counts[model] += 1
-            if self.best_model_info['precision']['model'] == model:
-                winner_counts[model] += 1
-            if self.best_model_info['recall']['model'] == model:
-                winner_counts[model] += 1
-            if self.best_model_info['f1_score']['model'] == model:
-                winner_counts[model] += 1
+            avg_rank, _ = self.calculate_model_rank(model)
+            ranks.append(avg_rank)
         
-        bars = self.ax4.bar(models, list(winner_counts.values()), color=colors[:len(models)])
-        self.ax4.set_title('Number of Metrics Won by Each Model')
-        self.ax4.set_ylabel('Number of Best Scores')
-        self.ax4.set_ylim(0, 4)
+        bars = self.ax4.bar(models, ranks, color=colors[:len(models)], alpha=0.8)
+        self.ax4.set_title('Overall Model Rankings\n(Lower is Better)', fontsize=12, fontweight='bold')
+        self.ax4.set_ylabel('Average Rank', fontsize=10)
+        self.ax4.tick_params(axis='x', rotation=45)
+        self.ax4.invert_yaxis()  # Lower ranks at top
         
-        # Add value labels
-        for bar, count in zip(bars, winner_counts.values()):
-            if count > 0:
-                height = bar.get_height()
-                self.ax4.text(bar.get_x() + bar.get_width()/2., height + 0.05,
-                             f'{count}', ha='center', va='bottom', fontweight='bold')
+        # Add value labels and highlight best
+        for i, (bar, rank) in enumerate(zip(bars, ranks)):
+            height = bar.get_height()
+            self.ax4.text(bar.get_x() + bar.get_width()/2., height - 0.1,
+                         f'#{rank:.1f}', ha='center', va='top', fontsize=9, fontweight='bold')
+            
+            # Highlight the best ranked model
+            if rank == min(ranks):
+                bar.set_color('gold')
+                bar.set_alpha(1.0)
 
         # Adjust layout and refresh
-        self.fig.tight_layout()
+        self.fig.tight_layout(pad=3.0)
         self.canvas.draw()
+
+    def update_performance_analysis(self):
+        """Update training performance analysis"""
+        self.performance_text.config(state="normal")
+        self.performance_text.delete("1.0", tk.END)
+
+        if not self.results:
+            self.performance_text.insert(tk.END, "No results available.")
+            self.performance_text.config(state="disabled")
+            return
+
+        analysis = f"""⚡ COMPREHENSIVE TRAINING PERFORMANCE ANALYSIS
+{'='*80}
+
+📊 TRAINING TIME SUMMARY:
+"""
+
+        # Sort by training time
+        sorted_by_time = sorted(self.results.items(), key=lambda x: x[1]['train_time'])
+        
+        analysis += f"{'Model':<15} {'Time (s)':<12} {'Speed Rank':<12} {'Optimization Level':<20}\n"
+        analysis += "-" * 70 + "\n"
+        
+        for i, (model, metrics) in enumerate(sorted_by_time, 1):
+            time_val = metrics['train_time']
+            if time_val < 0.001:
+                speed_desc = "Lightning Fast"
+            elif time_val < 0.01:
+                speed_desc = "Very Fast"
+            elif time_val < 0.1:
+                speed_desc = "Fast"
+            elif time_val < 1.0:
+                speed_desc = "Moderate"
+            else:
+                speed_desc = "Slow"
+                
+            analysis += f"{model:<15} {time_val:<12.4f} {i:<12} {speed_desc:<20}\n"
+
+        # Performance vs Accuracy trade-off
+        analysis += f"\n🎯 PERFORMANCE vs ACCURACY TRADE-OFF:\n"
+        analysis += "=" * 60 + "\n"
+        
+        for model, metrics in self.results.items():
+            accuracy = metrics['accuracy']
+            time_val = metrics['train_time']
+            efficiency = accuracy / (time_val * 1000)  # Accuracy per millisecond
+            
+            analysis += f"{model}:\n"
+            analysis += f"  • Accuracy: {accuracy:.2f}%\n"
+            analysis += f"  • Training Time: {time_val:.4f}s\n"
+            analysis += f"  • Efficiency Score: {efficiency:.1f} (acc%/ms)\n\n"
+
+        # Scalability analysis
+        analysis += f"📈 SCALABILITY INSIGHTS:\n"
+        analysis += "=" * 40 + "\n"
+        
+        for model, metrics in self.results.items():
+            time_val = metrics['train_time']
+            analysis += f"{model}:\n"
+            
+            if model == 'KNN':
+                analysis += f"  • Training: O(1) - stores data only\n"
+                analysis += f"  • Prediction: O(n) - compares with all training samples\n"
+                analysis += f"  • Memory: High - stores all training data\n"
+                analysis += f"  • Best for: Small to medium datasets\n"
+            
+            elif model == 'Naive Bayes':
+                analysis += f"  • Training: O(n×m) - linear with data size\n"
+                analysis += f"  • Prediction: O(m) - constant with training size\n"
+                analysis += f"  • Memory: Low - stores only class probabilities\n"
+                analysis += f"  • Best for: Large datasets, real-time prediction\n"
+            
+            elif model == 'Decision Tree':
+                analysis += f"  • Training: O(n×m×log(n)) - efficient tree building\n"
+                analysis += f"  • Prediction: O(log(n)) - fast tree traversal\n"
+                analysis += f"  • Memory: Medium - stores tree structure\n"
+                analysis += f"  • Best for: Interpretable models, medium datasets\n"
+            
+            elif model == 'SVM':
+                analysis += f"  • Training: O(n²) to O(n³) - depends on kernel\n"
+                analysis += f"  • Prediction: O(sv×m) - depends on support vectors\n"
+                analysis += f"  • Memory: Medium - stores support vectors only\n"
+                analysis += f"  • Best for: High-dimensional data, complex boundaries\n"
+            
+            analysis += f"  • Current training time: {time_val:.4f}s\n\n"
+
+        # Resource utilization
+        analysis += f"💻 RESOURCE UTILIZATION RECOMMENDATIONS:\n"
+        analysis += "=" * 50 + "\n"
+        
+        fastest = min(self.results.items(), key=lambda x: x[1]['train_time'])
+        most_accurate = max(self.results.items(), key=lambda x: x[1]['accuracy'])
+        
+        analysis += f"⚡ For real-time applications: Use {fastest[0]} "
+        analysis += f"({fastest[1]['train_time']:.4f}s training, {fastest[1]['accuracy']:.1f}% accuracy)\n\n"
+        
+        analysis += f"🎯 For maximum accuracy: Use {most_accurate[0]} "
+        analysis += f"({most_accurate[1]['accuracy']:.1f}% accuracy, {most_accurate[1]['train_time']:.4f}s training)\n\n"
+        
+        analysis += f"⚖️ For balanced performance: Use {self.best_model_info['overall']['model']} "
+        analysis += f"(overall best with score {self.best_model_info['overall']['score']:.3f})\n\n"
+
+        # Production deployment recommendations
+        analysis += f"🚀 PRODUCTION DEPLOYMENT GUIDE:\n"
+        analysis += "=" * 40 + "\n"
+        
+        for model, metrics in sorted(self.results.items(), key=lambda x: x[1]['accuracy'], reverse=True):
+            analysis += f"\n{model} Deployment Considerations:\n"
+            
+            if metrics['train_time'] < 0.01:
+                analysis += f"  ✅ Retraining: Can retrain frequently (every batch/hour)\n"
+            elif metrics['train_time'] < 0.1:
+                analysis += f"  ✅ Retraining: Suitable for daily/weekly retraining\n"
+            else:
+                analysis += f"  ⚠️  Retraining: Plan for less frequent retraining\n"
+                
+            if metrics['accuracy'] > 90:
+                analysis += f"  ✅ Accuracy: Excellent for production use\n"
+            elif metrics['accuracy'] > 80:
+                analysis += f"  ✅ Accuracy: Good for most production scenarios\n"
+            else:
+                analysis += f"  ⚠️  Accuracy: Consider feature engineering\n"
+                
+            analysis += f"  📊 Config: {metrics['best_param']}\n"
+
+        self.performance_text.insert(tk.END, analysis)
+        self.performance_text.config(state="disabled")
 
 
 if __name__ == "__main__":
