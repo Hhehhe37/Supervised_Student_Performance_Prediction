@@ -48,7 +48,7 @@ class ModelComparisonWindow:
                  font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
         
         self.split_var = tk.StringVar(value="80:20")
-        split_options = ["60:40", "70:30", "80:20", "85:15", "90:10"]
+        split_options = ["60:40", "70:30", "80:20", "90:10"]
         self.split_combo = ttk.Combobox(split_frame, textvariable=self.split_var, 
                                        values=split_options, state="readonly", width=8)
         self.split_combo.pack(side=tk.LEFT, padx=10)

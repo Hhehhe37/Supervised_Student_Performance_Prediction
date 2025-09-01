@@ -2,10 +2,10 @@ import tkinter as tk
 from tkinter import ttk
 from DataPreprocessing.correlation_matrix import CorrelationMatrixView
 from DataPreprocessing.Check_Missing import CheckMissingWindow
-from KNN_performance_measure import KNNPerformanceWindow
-from DecisionTree_performance_measure import DecisionTreePerformanceWindow
-from NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
-from SVM_performance_measure import SVMPerformanceWindow
+from Algorithm.KNN_performance_measure import KNNPerformanceWindow
+from Algorithm.DecisionTree_performance_measure import DecisionTreePerformanceWindow
+from Algorithm.NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
+from Algorithm.SVM_performance_measure import SVMPerformanceWindow
 
 class MissingValueApp:
     def __init__(self, root):
