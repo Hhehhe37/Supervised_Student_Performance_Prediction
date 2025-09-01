@@ -40,6 +40,24 @@ class ModelComparisonWindow:
                                bg="#ffffff", fg="#333")
         config_label.pack(anchor="w", padx=10, pady=5)
 
+        # Train-Test Split Configuration
+        split_frame = tk.Frame(config_frame, bg="#ffffff")
+        split_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        tk.Label(split_frame, text="Train-Test Split:", 
+                 font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
+        
+        self.split_var = tk.StringVar(value="80:20")
+        split_options = ["60:40", "70:30", "80:20", "85:15", "90:10"]
+        self.split_combo = ttk.Combobox(split_frame, textvariable=self.split_var, 
+                                       values=split_options, state="readonly", width=8)
+        self.split_combo.pack(side=tk.LEFT, padx=10)
+        
+        # Add explanation label
+        split_explain = tk.Label(split_frame, text="(Train:Test ratio)", 
+                               font=("Segoe UI", 9), bg="#ffffff", fg="#666")
+        split_explain.pack(side=tk.LEFT, padx=5)
+
         # Feature selection
         feature_frame = tk.Frame(config_frame, bg="#ffffff")
         feature_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -106,6 +124,12 @@ class ModelComparisonWindow:
         # Tab 5: Training Performance
         self.create_performance_tab()
 
+    def get_test_size_from_split(self, split_ratio):
+        """Convert split ratio string to test_size float"""
+        train_pct, test_pct = split_ratio.split(":")
+        test_size = int(test_pct) / (int(train_pct) + int(test_pct))
+        return test_size
+
     def create_comparison_tab(self):
         """Create the main comparison table tab"""
         self.tab1 = tk.Frame(self.notebook, bg="#ffffff")
@@ -135,6 +159,11 @@ class ModelComparisonWindow:
         # Winner labels frame
         self.winners_frame = tk.Frame(self.tab1, bg="#ffffff")
         self.winners_frame.pack(pady=20, fill=tk.X)
+        
+        # Data split info
+        self.split_info_label = tk.Label(self.winners_frame, text="", font=("Segoe UI", 12, "italic"), 
+                                       bg="#ffffff", fg="#666")
+        self.split_info_label.pack(pady=2)
         
         # Overall winner
         self.overall_winner_label = tk.Label(self.winners_frame, text="", font=("Segoe UI", 16, "bold"), 
@@ -206,7 +235,7 @@ class ModelComparisonWindow:
         self.root.update()
 
     def run_comparison(self):
-        """Run comparison between selected models with optimizations"""
+        """Run comparison between selected models with configurable train-test split"""
         try:
             # Disable button during evaluation
             self.compare_button.config(state="disabled")
@@ -224,6 +253,11 @@ class ModelComparisonWindow:
             self.update_status("Loading and preparing data...")
             file_path = os.path.join(OUTPUT_FOLDER, "FilteredStudentPerformance.csv")
             df = pd.read_csv(file_path)
+
+            # Get train-test split ratio
+            split_ratio = self.split_var.get()
+            test_size = self.get_test_size_from_split(split_ratio)
+            self.update_status(f"Using {split_ratio} train-test split...")
 
             # Feature selection
             user_input = self.top_k_entry.get().strip().lower()
@@ -250,7 +284,18 @@ class ModelComparisonWindow:
             X = df_filtered.drop("GradeClass", axis=1)
             y = df_filtered["GradeClass"]
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Use configurable train-test split
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+            # Store split info for display
+            train_size = len(X_train)
+            test_size_actual = len(X_test)
+            self.split_info = {
+                'ratio': split_ratio,
+                'train_size': train_size,
+                'test_size': test_size_actual,
+                'total_size': len(df_filtered)
+            }
 
             # Standardize features
             scaler = StandardScaler()
@@ -301,7 +346,7 @@ class ModelComparisonWindow:
             self.update_visualization()
             self.update_performance_analysis()
 
-            self.update_status(f"Comparison completed! Analyzed {len(selected_models)} models.")
+            self.update_status(f"Comparison completed! Analyzed {len(selected_models)} models with {split_ratio} split.")
 
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
@@ -310,6 +355,10 @@ class ModelComparisonWindow:
             self.compare_button.config(state="normal")
             self.progress['value'] = self.progress['maximum']
 
+    # [Include all the evaluation methods from the original code here]
+    # evaluate_knn_optimized, evaluate_naive_bayes, evaluate_decision_tree_optimized, evaluate_svm_optimized
+    # find_best_models, calculate_model_rank, update_comparison_table, etc.
+    
     def evaluate_knn_optimized(self, X_train, X_test, y_train, y_test):
         """Evaluate KNN with k optimization (1-20)"""
         best_k, best_accuracy = 1, 0
@@ -584,11 +633,10 @@ class ModelComparisonWindow:
             speed_score = (max_time - metrics['train_time']) / max_time if max_time > 0 else 0
             
             # Calculate weighted overall score
-            overall_score = (normalized_accuracy * 0.35 + 
+            overall_score = (normalized_accuracy * 0.40 + 
                            metrics['precision'] * 0.25 + 
                            metrics['recall'] * 0.25 + 
-                           metrics['f1_score'] * 0.1 + 
-                           speed_score * 0.05)  # Speed has small weight
+                           metrics['f1_score'] * 0.1)
             
             if overall_score > self.best_model_info['overall']['score']:
                 self.best_model_info['overall'] = {'model': model, 'score': overall_score}
@@ -627,10 +675,17 @@ class ModelComparisonWindow:
         return avg_rank, best_count
 
     def update_comparison_table(self):
-        """Update the comparison table"""
+        """Update the comparison table with split information"""
         # Clear existing data
         for item in self.comparison_tree.get_children():
             self.comparison_tree.delete(item)
+
+        # Update split info label
+        if hasattr(self, 'split_info'):
+            split_text = (f"Data Split: {self.split_info['ratio']} "
+                         f"(Training: {self.split_info['train_size']} samples, "
+                         f"Testing: {self.split_info['test_size']} samples)")
+            self.split_info_label.config(text=split_text)
 
         # Insert results with rankings
         model_rankings = []
@@ -670,7 +725,7 @@ class ModelComparisonWindow:
         self.metric_winners_label.config(text=winners_text)
 
     def update_best_model_analysis(self, num_features):
-        """Update best model analysis"""
+        """Update best model analysis with split information"""
         self.best_model_text.config(state="normal")
         self.best_model_text.delete("1.0", tk.END)
 
@@ -685,9 +740,13 @@ class ModelComparisonWindow:
         analysis = f"""🏆 COMPREHENSIVE BEST MODEL ANALYSIS
 {'='*80}
 
+📊 DATASET CONFIGURATION:
+Features Used: {num_features}
+Data Split: {self.split_info['ratio']} (Train: {self.split_info['train_size']}, Test: {self.split_info['test_size']})
+Total Samples: {self.split_info['total_size']}
+
 🥇 OVERALL WINNER: {best_model}
 Overall Performance Score: {self.best_model_info['overall']['score']:.4f}
-Features Used: {num_features}
 Best Configuration: {best_metrics['best_param']}
 
 📊 PERFORMANCE METRICS:
@@ -718,6 +777,22 @@ Best Configuration: {best_metrics['best_param']}
         else:
             analysis += "• Provides the best balanced performance across all evaluation metrics\n\n"
 
+        # Impact of train-test split
+        split_ratio = self.split_info['ratio']
+        train_pct = int(split_ratio.split(':')[0])
+        test_pct = int(split_ratio.split(':')[1])
+        
+        analysis += f"📈 TRAIN-TEST SPLIT IMPACT ({split_ratio}):\n"
+        if train_pct >= 85:
+            analysis += f"• Large training set ({train_pct}%) - Better model learning capability\n"
+            analysis += f"• Small test set ({test_pct}%) - Less robust evaluation, higher variance\n"
+        elif train_pct >= 75:
+            analysis += f"• Balanced split - Good compromise between training and evaluation\n"
+        else:
+            analysis += f"• Smaller training set ({train_pct}%) - May limit model complexity\n"
+            analysis += f"• Large test set ({test_pct}%) - More robust evaluation, lower variance\n"
+        analysis += "\n"
+
         # Model-specific insights
         analysis += f"🔍 MODEL-SPECIFIC INSIGHTS ({best_model}):\n"
         if best_model == 'KNN':
@@ -725,14 +800,14 @@ Best Configuration: {best_metrics['best_param']}
             analysis += f"• Optimal number of neighbors: {specific['neighbors']}\n"
             analysis += f"• Tested {specific['total_tested']} different k values\n"
             analysis += f"• Instance-based learning: Makes predictions based on similarity to training data\n"
-            analysis += f"• Works well when local patterns in data are important\n\n"
+            analysis += f"• Performance may vary with different train-test splits\n\n"
         
         elif best_model == 'Naive Bayes':
             specific = best_metrics['model_specific']
             analysis += f"• Algorithm type: {specific['algorithm']}\n"
             analysis += f"• Key assumption: {specific['assumptions']}\n"
             analysis += f"• Probabilistic model: Uses Bayes' theorem for predictions\n"
-            analysis += f"• Excellent performance despite simplicity\n\n"
+            analysis += f"• Generally stable across different train-test splits\n\n"
         
         elif best_model == 'Decision Tree':
             specific = best_metrics['model_specific']
@@ -740,16 +815,14 @@ Best Configuration: {best_metrics['best_param']}
             analysis += f"• Min samples to split: {specific['params']['min_samples_split']}\n"
             analysis += f"• Min samples per leaf: {specific['params']['min_samples_leaf']}\n"
             analysis += f"• Tree complexity: {specific['n_nodes']} nodes, {specific['n_leaves']} leaves\n"
-            analysis += f"• Actual max depth reached: {specific['max_depth_actual']}\n"
-            analysis += f"• Interpretable model: Easy to understand decision rules\n\n"
+            analysis += f"• May be sensitive to train-test split variations\n\n"
         
         elif best_model == 'SVM':
             specific = best_metrics['model_specific']
             analysis += f"• Kernel configuration: {specific['params']}\n"
             analysis += f"• Support vectors per class: {list(specific['support_vectors'])}\n"
             analysis += f"• Total support vectors: {specific['total_support_vectors']}\n"
-            analysis += f"• Margin maximization: Finds optimal decision boundary\n"
-            analysis += f"• Strong generalization: Works well with high-dimensional data\n\n"
+            analysis += f"• Generally robust to different train-test splits\n\n"
 
         # Performance comparison
         analysis += f"📈 PERFORMANCE COMPARISON WITH OTHER MODELS:\n"
@@ -781,7 +854,8 @@ Best Configuration: {best_metrics['best_param']}
 
         analysis += f"🎯 FINAL RECOMMENDATION:\n"
         analysis += "=" * 60 + "\n"
-        analysis += f"Deploy {best_model} with configuration: {best_metrics['best_param']}\n\n"
+        analysis += f"Deploy {best_model} with configuration: {best_metrics['best_param']}\n"
+        analysis += f"Using {split_ratio} train-test split for evaluation\n\n"
         
         analysis += f"This model provides:\n"
         if best_metrics['accuracy'] >= 90:
@@ -791,14 +865,8 @@ Best Configuration: {best_metrics['best_param']}
         else:
             analysis += f"• Moderate accuracy ({best_metrics['accuracy']:.1f}%) - consider feature engineering\n"
         
-        if best_metrics['train_time'] < 0.01:
-            analysis += f"• Very fast training ({best_metrics['train_time']:.4f}s) - ideal for real-time applications\n"
-        elif best_metrics['train_time'] < 0.1:
-            analysis += f"• Fast training ({best_metrics['train_time']:.4f}s) - suitable for frequent retraining\n"
-        else:
-            analysis += f"• Moderate training time ({best_metrics['train_time']:.4f}s) - plan accordingly for retraining\n"
-        
         analysis += f"• Balanced precision and recall for reliable classification across all classes\n"
+        analysis += f"• Training time of {best_metrics['train_time']:.4f}s suitable for your application needs\n"
 
         self.best_model_text.insert(tk.END, analysis)
         self.best_model_text.config(state="disabled")
@@ -812,6 +880,15 @@ Best Configuration: {best_metrics['best_param']}
             self.detailed_text.insert(tk.END, "No results available.")
             self.detailed_text.config(state="disabled")
             return
+
+        # Add split information at the top
+        if hasattr(self, 'split_info'):
+            self.detailed_text.insert(tk.END, f"DATA CONFIGURATION\n")
+            self.detailed_text.insert(tk.END, f"{'='*40}\n")
+            self.detailed_text.insert(tk.END, f"Train-Test Split: {self.split_info['ratio']}\n")
+            self.detailed_text.insert(tk.END, f"Training Samples: {self.split_info['train_size']}\n")
+            self.detailed_text.insert(tk.END, f"Testing Samples: {self.split_info['test_size']}\n")
+            self.detailed_text.insert(tk.END, f"Total Samples: {self.split_info['total_size']}\n\n")
 
         # Sort models by overall performance
         overall_scores = {}
@@ -886,7 +963,12 @@ Best Configuration: {best_metrics['best_param']}
 
         colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
-        # 1. All Metrics Comparison (Radar-like)
+        # Update figure title with split info
+        if hasattr(self, 'split_info'):
+            self.fig.suptitle(f'Advanced Model Performance Analysis - {self.split_info["ratio"]} Split', 
+                             fontsize=16, fontweight='bold')
+
+        # 1. All Metrics Comparison
         x = np.arange(len(models))
         width = 0.18
         
@@ -984,7 +1066,7 @@ Best Configuration: {best_metrics['best_param']}
         self.canvas.draw()
 
     def update_performance_analysis(self):
-        """Update training performance analysis"""
+        """Update training performance analysis with split impact"""
         self.performance_text.config(state="normal")
         self.performance_text.delete("1.0", tk.END)
 
@@ -996,8 +1078,30 @@ Best Configuration: {best_metrics['best_param']}
         analysis = f"""⚡ COMPREHENSIVE TRAINING PERFORMANCE ANALYSIS
 {'='*80}
 
-📊 TRAINING TIME SUMMARY:
+📊 DATASET CONFIGURATION:
+Train-Test Split: {self.split_info['ratio']}
+Training Samples: {self.split_info['train_size']}
+Testing Samples: {self.split_info['test_size']}
+Total Dataset Size: {self.split_info['total_size']}
+
+📈 SPLIT IMPACT ANALYSIS:
 """
+        split_ratio = self.split_info['ratio']
+        train_pct = int(split_ratio.split(':')[0])
+        
+        if train_pct >= 85:
+            analysis += f"• HIGH TRAINING DATA ({train_pct}%): Models have more data to learn patterns\n"
+            analysis += f"• Potential for better model complexity and performance\n"
+            analysis += f"• Smaller test set may lead to higher variance in evaluation\n"
+        elif train_pct >= 75:
+            analysis += f"• BALANCED SPLIT ({train_pct}%): Good compromise between training and evaluation\n"
+            analysis += f"• Standard practice for most machine learning applications\n"
+        else:
+            analysis += f"• CONSERVATIVE TRAINING ({train_pct}%): More data reserved for testing\n"
+            analysis += f"• More robust evaluation but may limit model learning capability\n"
+            analysis += f"• Better for assessing generalization performance\n"
+        
+        analysis += f"\n📊 TRAINING TIME SUMMARY:\n"
 
         # Sort by training time
         sorted_by_time = sorted(self.results.items(), key=lambda x: x[1]['train_time'])
@@ -1034,78 +1138,15 @@ Best Configuration: {best_metrics['best_param']}
             analysis += f"  • Training Time: {time_val:.4f}s\n"
             analysis += f"  • Efficiency Score: {efficiency:.1f} (acc%/ms)\n\n"
 
-        # Scalability analysis
-        analysis += f"📈 SCALABILITY INSIGHTS:\n"
-        analysis += "=" * 40 + "\n"
-        
-        for model, metrics in self.results.items():
-            time_val = metrics['train_time']
-            analysis += f"{model}:\n"
-            
-            if model == 'KNN':
-                analysis += f"  • Training: O(1) - stores data only\n"
-                analysis += f"  • Prediction: O(n) - compares with all training samples\n"
-                analysis += f"  • Memory: High - stores all training data\n"
-                analysis += f"  • Best for: Small to medium datasets\n"
-            
-            elif model == 'Naive Bayes':
-                analysis += f"  • Training: O(n×m) - linear with data size\n"
-                analysis += f"  • Prediction: O(m) - constant with training size\n"
-                analysis += f"  • Memory: Low - stores only class probabilities\n"
-                analysis += f"  • Best for: Large datasets, real-time prediction\n"
-            
-            elif model == 'Decision Tree':
-                analysis += f"  • Training: O(n×m×log(n)) - efficient tree building\n"
-                analysis += f"  • Prediction: O(log(n)) - fast tree traversal\n"
-                analysis += f"  • Memory: Medium - stores tree structure\n"
-                analysis += f"  • Best for: Interpretable models, medium datasets\n"
-            
-            elif model == 'SVM':
-                analysis += f"  • Training: O(n²) to O(n³) - depends on kernel\n"
-                analysis += f"  • Prediction: O(sv×m) - depends on support vectors\n"
-                analysis += f"  • Memory: Medium - stores support vectors only\n"
-                analysis += f"  • Best for: High-dimensional data, complex boundaries\n"
-            
-            analysis += f"  • Current training time: {time_val:.4f}s\n\n"
-
-        # Resource utilization
-        analysis += f"💻 RESOURCE UTILIZATION RECOMMENDATIONS:\n"
-        analysis += "=" * 50 + "\n"
-        
+        # Final recommendations
         fastest = min(self.results.items(), key=lambda x: x[1]['train_time'])
         most_accurate = max(self.results.items(), key=lambda x: x[1]['accuracy'])
         
-        analysis += f"⚡ For real-time applications: Use {fastest[0]} "
-        analysis += f"({fastest[1]['train_time']:.4f}s training, {fastest[1]['accuracy']:.1f}% accuracy)\n\n"
-        
-        analysis += f"🎯 For maximum accuracy: Use {most_accurate[0]} "
-        analysis += f"({most_accurate[1]['accuracy']:.1f}% accuracy, {most_accurate[1]['train_time']:.4f}s training)\n\n"
-        
-        analysis += f"⚖️ For balanced performance: Use {self.best_model_info['overall']['model']} "
-        analysis += f"(overall best with score {self.best_model_info['overall']['score']:.3f})\n\n"
-
-        # Production deployment recommendations
-        analysis += f"🚀 PRODUCTION DEPLOYMENT GUIDE:\n"
-        analysis += "=" * 40 + "\n"
-        
-        for model, metrics in sorted(self.results.items(), key=lambda x: x[1]['accuracy'], reverse=True):
-            analysis += f"\n{model} Deployment Considerations:\n"
-            
-            if metrics['train_time'] < 0.01:
-                analysis += f"  ✅ Retraining: Can retrain frequently (every batch/hour)\n"
-            elif metrics['train_time'] < 0.1:
-                analysis += f"  ✅ Retraining: Suitable for daily/weekly retraining\n"
-            else:
-                analysis += f"  ⚠️  Retraining: Plan for less frequent retraining\n"
-                
-            if metrics['accuracy'] > 90:
-                analysis += f"  ✅ Accuracy: Excellent for production use\n"
-            elif metrics['accuracy'] > 80:
-                analysis += f"  ✅ Accuracy: Good for most production scenarios\n"
-            else:
-                analysis += f"  ⚠️  Accuracy: Consider feature engineering\n"
-                
-            analysis += f"  📊 Config: {metrics['best_param']}\n"
+        analysis += f"🚀 RECOMMENDATIONS BASED ON {split_ratio} SPLIT:\n"
+        analysis += "=" * 50 + "\n"
+        analysis += f"⚡ For speed: {fastest[0]} ({fastest[1]['train_time']:.4f}s, {fastest[1]['accuracy']:.1f}%)\n"
+        analysis += f"🎯 For accuracy: {most_accurate[0]} ({most_accurate[1]['accuracy']:.1f}%, {most_accurate[1]['train_time']:.4f}s)\n"
+        analysis += f"⚖️ Best overall: {self.best_model_info['overall']['model']} (balanced performance)\n"
 
         self.performance_text.insert(tk.END, analysis)
         self.performance_text.config(state="disabled")
