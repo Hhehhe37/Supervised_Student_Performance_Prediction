@@ -6,6 +6,7 @@ from Algorithm.KNN_performance_measure import KNNPerformanceWindow
 from Algorithm.DecisionTree_performance_measure import DecisionTreePerformanceWindow
 from Algorithm.NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
 from Algorithm.SVM_performance_measure import SVMPerformanceWindow
+from DataPreprocessing.RFE import RFEFeatureSelector
 
 class MissingValueApp:
     def __init__(self, root):
@@ -80,6 +81,7 @@ class MissingValueApp:
         buttons = [
             ("🧹 Data Preprocessing", self.open_cleaning_window),
             ("📊 Correlation Matrix", self.open_correlation_window),
+            ("📊 RFE", self.open_rfe_window),
             ("🤖 KNN Performance", self.open_knn_prediction_window),
             ("🤖 Naive Bayes Performance", self.open_nb_prediction_window),
             ("🌳 Decision Tree Performance", self.open_dtree_prediction_window),
@@ -108,6 +110,10 @@ class MissingValueApp:
     def open_correlation_window(self):
         corr_view = CorrelationMatrixView()
         corr_view.show_correlation()
+        
+    def open_rfe_window(self):
+        rfe_view = RFEFeatureSelector()
+        rfe_view.run_rfe()
 
     def open_knn_prediction_window(self):
         knn_window = tk.Toplevel(self.root)
