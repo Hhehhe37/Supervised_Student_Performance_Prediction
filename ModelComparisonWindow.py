@@ -124,6 +124,9 @@ class ModelComparisonWindow:
         # Tab 5: Training Performance
         self.create_performance_tab()
 
+        # Tab 6: Statistics Measurement
+        self.create_statistics_tab()
+
     def get_test_size_from_split(self, split_ratio):
         """Convert split ratio string to test_size float"""
         train_pct, test_pct = split_ratio.split(":")
@@ -228,6 +231,20 @@ class ModelComparisonWindow:
         self.performance_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         scrollbar_perf.pack(side=tk.RIGHT, fill=tk.Y)
         self.performance_text.config(state="disabled")
+
+    def create_statistics_tab(self):
+        """Create statistics tab"""
+        self.tab6 = tk.Frame(self.notebook, bg="#ffffff")
+        self.notebook.add(self.tab6, text="📊 Statistics")
+
+        # Statistics text
+        self.statistics_text = tk.Text(self.tab6, height=30, font=("Courier New", 11), wrap="word")
+        scrollbar_stats = ttk.Scrollbar(self.tab6, command=self.statistics_text.yview)
+        self.statistics_text.config(yscrollcommand=scrollbar_stats.set)
+
+        self.statistics_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        scrollbar_stats.pack(side=tk.RIGHT, fill=tk.Y)
+        self.statistics_text.config(state="disabled")
 
     def update_status(self, message):
         """Update status label"""
