@@ -34,9 +34,27 @@ class DecisionTreePerformanceWindow:
                                bg="#ffffff", fg="#333")
         input_label.pack(anchor="w", padx=10, pady=5)
 
+        # Controls container
+        controls_container = tk.Frame(input_frame, bg="#ffffff")
+        controls_container.pack(fill=tk.X, padx=10, pady=5)
+
+        # Train-Test Split Ratio Selection
+        ratio_frame = tk.Frame(controls_container, bg="#ffffff")
+        ratio_frame.pack(side=tk.LEFT, padx=(0, 20))
+
+        tk.Label(ratio_frame, text="Train-Test Split Ratio:", 
+                 font=("Segoe UI", 11, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+        
+        self.ratio_var = tk.StringVar()
+        self.ratio_combo = ttk.Combobox(ratio_frame, textvariable=self.ratio_var, 
+                                       values=["60:40", "70:30", "80:20", "90:10"], 
+                                       state="readonly", width=10)
+        self.ratio_combo.set("80:20")  # Default value
+        self.ratio_combo.pack(side=tk.LEFT, padx=(10, 0))
+
         # Top-k features input
-        feature_frame = tk.Frame(input_frame, bg="#ffffff")
-        feature_frame.pack(fill=tk.X, padx=10, pady=5)
+        feature_frame = tk.Frame(controls_container, bg="#ffffff")
+        feature_frame.pack(side=tk.LEFT)
         
         tk.Label(feature_frame, text="Number of top features (or 'all'):", 
                  font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
@@ -58,9 +76,17 @@ class DecisionTreePerformanceWindow:
         self.tab1 = tk.Frame(notebook, bg="#ffffff")
         notebook.add(self.tab1, text="📊 Hyperparameter Results")
 
+        # Configuration info frame
+        config_frame = tk.Frame(self.tab1, bg="#ffffff")
+        config_frame.pack(pady=10, padx=10, fill="x")
+
+        self.config_label = tk.Label(config_frame, text="", font=("Segoe UI", 10), 
+                                     bg="#ffffff", fg="#666", anchor="w", justify="left")
+        self.config_label.pack(anchor="w")
+
         # Table for results
         columns = ("max_depth", "min_samples_split", "min_samples_leaf", "accuracy")
-        self.tree = ttk.Treeview(self.tab1, columns=columns, show="headings", height=12)
+        self.tree = ttk.Treeview(self.tab1, columns=columns, show="headings", height=10)
         
         self.tree.heading("max_depth", text="Max Depth")
         self.tree.heading("min_samples_split", text="Min Samples Split")
@@ -104,6 +130,11 @@ class DecisionTreePerformanceWindow:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.config(yscrollcommand=scrollbar.set)
 
+    def get_test_size_from_ratio(self, ratio_string):
+        """Convert ratio string like '80:20' to test_size float like 0.2"""
+        train_ratio, test_ratio = map(int, ratio_string.split(':'))
+        return test_ratio / (train_ratio + test_ratio)
+
     def evaluate_decision_tree(self):
         try:
             # Load the filtered dataset
@@ -138,7 +169,17 @@ class DecisionTreePerformanceWindow:
             X = df_filtered.drop("GradeClass", axis=1)
             y = df_filtered["GradeClass"]
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Get selected ratio and convert to test_size
+            selected_ratio = self.ratio_var.get()
+            test_size = self.get_test_size_from_ratio(selected_ratio)
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+            # Update configuration display
+            features_used = len(top_features) - 1  # Subtract GradeClass
+            self.config_label.config(
+                text=f"🔧 Configuration: Train-Test Split = {selected_ratio} | Features used: {features_used} | Training samples: {len(X_train)} | Testing samples: {len(X_test)}"
+            )
 
             # Hyperparameter grid
             max_depths = [3, 5, 7, 10, 15, 20, None]
@@ -188,7 +229,11 @@ class DecisionTreePerformanceWindow:
                 'accuracy': best_accuracy,
                 'params': best_params,
                 'confusion_matrix': confusion_matrix(y_test, best_y_pred),
-                'classification_report': classification_report(y_test, best_y_pred, output_dict=True)
+                'classification_report': classification_report(y_test, best_y_pred, output_dict=True),
+                'ratio': selected_ratio,
+                'train_samples': len(X_train),
+                'test_samples': len(X_test),
+                'features_used': features_used
             }
 
             # Clear and populate results table
@@ -214,7 +259,8 @@ class DecisionTreePerformanceWindow:
                      f"🌳 Max Depth: {best_depth}\n"
                      f"📊 Min Samples Split: {best_params['min_samples_split']}\n"
                      f"🍃 Min Samples Leaf: {best_params['min_samples_leaf']}\n"
-                     f"🎯 Best Accuracy: {best_accuracy:.2f}%"
+                     f"🎯 Best Accuracy: {best_accuracy:.2f}%\n"
+                     f"📊 Split Ratio: {selected_ratio}"
             )
 
             # Feature Importance
@@ -226,6 +272,7 @@ class DecisionTreePerformanceWindow:
             self.feature_text.config(state="normal")
             self.feature_text.delete("1.0", tk.END)
             
+            self.feature_text.insert(tk.END, f"🔧 Configuration: Train-Test Split = {selected_ratio}\n")
             self.feature_text.insert(tk.END, f"🔍 Feature Importance (using {len(top_features)-1} features):\n")
             self.feature_text.insert(tk.END, "-" * 50 + "\n")
             self.feature_text.insert(tk.END, f"{'Feature':<25} {'Importance':>15}\n")
@@ -253,6 +300,13 @@ class DecisionTreePerformanceWindow:
 
             self.output_text.config(state="normal")
             self.output_text.delete("1.0", tk.END)
+
+            # Show configuration info
+            self.output_text.insert(tk.END, f"🔧 Configuration:\n")
+            self.output_text.insert(tk.END, f"   Train-Test Split: {selected_ratio}\n")
+            self.output_text.insert(tk.END, f"   Features used: {features_used}\n")
+            self.output_text.insert(tk.END, f"   Training samples: {len(X_train)}\n")
+            self.output_text.insert(tk.END, f"   Testing samples: {len(X_test)}\n\n")
 
             self.output_text.insert(tk.END, f"🌳 Best Decision Tree Model Results:\n")
             self.output_text.insert(tk.END, f"Max Depth: {best_depth}\n")

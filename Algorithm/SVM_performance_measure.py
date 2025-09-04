@@ -19,7 +19,7 @@ class SVMPerformanceWindow:
         self.best_results = None  # Store results
         
         self.root.title("📈 SVM Performance Evaluation")
-        self.root.geometry("1000x800")
+        self.root.geometry("1000x850")
         self.root.configure(bg="#f5f7fa")
 
         # Title
@@ -35,9 +35,27 @@ class SVMPerformanceWindow:
                                bg="#ffffff", fg="#333")
         input_label.pack(anchor="w", padx=10, pady=5)
 
-        # Kernel selection
-        kernel_frame = tk.Frame(input_frame, bg="#ffffff")
-        kernel_frame.pack(fill=tk.X, padx=10, pady=5)
+        # Controls container for better organization
+        controls_container = tk.Frame(input_frame, bg="#ffffff")
+        controls_container.pack(fill=tk.X, padx=10, pady=5)
+
+        # Train-Test Split Ratio Selection (First row)
+        ratio_frame = tk.Frame(controls_container, bg="#ffffff")
+        ratio_frame.pack(fill=tk.X, pady=2)
+
+        tk.Label(ratio_frame, text="Train-Test Split Ratio:", 
+                 font=("Segoe UI", 11, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+        
+        self.ratio_var = tk.StringVar()
+        self.ratio_combo = ttk.Combobox(ratio_frame, textvariable=self.ratio_var, 
+                                       values=["60:40", "70:30", "80:20", "90:10"], 
+                                       state="readonly", width=10)
+        self.ratio_combo.set("80:20")  # Default value
+        self.ratio_combo.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Kernel selection (Second row)
+        kernel_frame = tk.Frame(controls_container, bg="#ffffff")
+        kernel_frame.pack(fill=tk.X, pady=2)
         
         tk.Label(kernel_frame, text="Kernel types to test:", 
                  font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
@@ -46,17 +64,17 @@ class SVMPerformanceWindow:
         kernel_options = ["all", "linear", "poly", "rbf", "sigmoid"]
         self.kernel_combo = ttk.Combobox(kernel_frame, textvariable=self.kernel_var, 
                                          values=kernel_options, state="readonly", width=15)
-        self.kernel_combo.pack(side=tk.LEFT, padx=10)
+        self.kernel_combo.pack(side=tk.LEFT, padx=(10, 0))
 
-        # Top-k features input
-        feature_frame = tk.Frame(input_frame, bg="#ffffff")
-        feature_frame.pack(fill=tk.X, padx=10, pady=5)
+        # Top-k features input (Third row)
+        feature_frame = tk.Frame(controls_container, bg="#ffffff")
+        feature_frame.pack(fill=tk.X, pady=2)
         
         tk.Label(feature_frame, text="Number of top features (or 'all'):", 
                  font=("Segoe UI", 11), bg="#ffffff").pack(side=tk.LEFT)
         
         self.top_k_entry = tk.Entry(feature_frame, font=("Segoe UI", 11), width=10)
-        self.top_k_entry.pack(side=tk.LEFT, padx=10)
+        self.top_k_entry.pack(side=tk.LEFT, padx=(10, 0))
         self.top_k_entry.insert(0, "all")  # Default value
 
         # Run Evaluation Button
@@ -81,9 +99,17 @@ class SVMPerformanceWindow:
         self.tab1 = tk.Frame(notebook, bg="#ffffff")
         notebook.add(self.tab1, text="📊 SVM Results")
 
+        # Configuration info frame
+        config_frame = tk.Frame(self.tab1, bg="#ffffff")
+        config_frame.pack(pady=10, padx=10, fill="x")
+
+        self.config_label = tk.Label(config_frame, text="", font=("Segoe UI", 10), 
+                                     bg="#ffffff", fg="#666", anchor="w", justify="left")
+        self.config_label.pack(anchor="w")
+
         # Table for results
         columns = ("kernel", "C", "gamma", "degree", "accuracy", "train_time")
-        self.tree = ttk.Treeview(self.tab1, columns=columns, show="headings", height=12)
+        self.tree = ttk.Treeview(self.tab1, columns=columns, show="headings", height=10)
         
         self.tree.heading("kernel", text="Kernel")
         self.tree.heading("C", text="C Parameter")
@@ -135,6 +161,11 @@ class SVMPerformanceWindow:
         output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.config(yscrollcommand=output_scrollbar.set)
 
+    def get_test_size_from_ratio(self, ratio_string):
+        """Convert ratio string like '80:20' to test_size float like 0.2"""
+        train_ratio, test_ratio = map(int, ratio_string.split(':'))
+        return test_ratio / (train_ratio + test_ratio)
+
     def update_status(self, message):
         """Update status label"""
         self.status_label.config(text=message)
@@ -153,6 +184,7 @@ class SVMPerformanceWindow:
             # Get user input for features
             user_input = self.top_k_entry.get().strip().lower()
             kernel_selection = self.kernel_var.get()
+            selected_ratio = self.ratio_var.get()
 
             # Determine k features to use
             if user_input == "all" or user_input == "":
@@ -180,7 +212,15 @@ class SVMPerformanceWindow:
             X = df_filtered.drop("GradeClass", axis=1)
             y = df_filtered["GradeClass"]
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Get selected ratio and convert to test_size
+            test_size = self.get_test_size_from_ratio(selected_ratio)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+            # Update configuration display
+            features_used = len(top_features) - 1
+            self.config_label.config(
+                text=f"🔧 Configuration: Train-Test Split = {selected_ratio} | Features: {features_used} | Training: {len(X_train)} | Testing: {len(X_test)} | Kernel(s): {kernel_selection}"
+            )
 
             # Standardize features (important for SVM)
             self.update_status("Standardizing features...")
@@ -283,7 +323,10 @@ class SVMPerformanceWindow:
                 'confusion_matrix': confusion_matrix(y_test, best_y_pred),
                 'classification_report': classification_report(y_test, best_y_pred, output_dict=True),
                 'support_vectors': best_svm.n_support_,
-                'num_features': len(top_features) - 1
+                'num_features': len(top_features) - 1,
+                'ratio': selected_ratio,
+                'train_samples': len(X_train),
+                'test_samples': len(X_test)
             }
 
             # Clear and populate results table
@@ -315,13 +358,15 @@ class SVMPerformanceWindow:
                      f"🎛️ Gamma: {gamma_display}\n"
                      f"📈 Degree: {degree_display}\n"
                      f"🎯 Best Accuracy: {best_accuracy:.2f}%\n"
-                     f"🔢 Support Vectors: {sum(best_svm.n_support_)}"
+                     f"🔢 Support Vectors: {sum(best_svm.n_support_)}\n"
+                     f"📊 Split Ratio: {selected_ratio}"
             )
 
             # Feature Analysis
             self.feature_text.config(state="normal")
             self.feature_text.delete("1.0", tk.END)
             
+            self.feature_text.insert(tk.END, f"🔧 Configuration: Train-Test Split = {selected_ratio}\n")
             self.feature_text.insert(tk.END, f"🔍 Feature Analysis (using {len(top_features)-1} features):\n")
             self.feature_text.insert(tk.END, "=" * 60 + "\n\n")
             
@@ -358,6 +403,13 @@ class SVMPerformanceWindow:
 
             self.output_text.config(state="normal")
             self.output_text.delete("1.0", tk.END)
+
+            # Show configuration info
+            self.output_text.insert(tk.END, f"🔧 Configuration:\n")
+            self.output_text.insert(tk.END, f"   Train-Test Split: {selected_ratio}\n")
+            self.output_text.insert(tk.END, f"   Features used: {features_used}\n")
+            self.output_text.insert(tk.END, f"   Training samples: {len(X_train)}\n")
+            self.output_text.insert(tk.END, f"   Testing samples: {len(X_test)}\n\n")
 
             self.output_text.insert(tk.END, f"🔍 Best SVM Model Results:\n")
             self.output_text.insert(tk.END, "=" * 50 + "\n")

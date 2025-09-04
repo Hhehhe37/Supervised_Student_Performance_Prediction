@@ -6,7 +6,7 @@ from Algorithm.KNN_performance_measure import KNNPerformanceWindow
 from Algorithm.DecisionTree_performance_measure import DecisionTreePerformanceWindow
 from Algorithm.NaiveBayes_performance_measure import NaiveBayesPerformanceWindow
 from Algorithm.SVM_performance_measure import SVMPerformanceWindow
-from DataPreprocessing.RFE import RFEFeatureSelector
+from ModelComparisonWindow import ModelComparisonWindow
 
 class MissingValueApp:
     def __init__(self, root):
@@ -81,12 +81,11 @@ class MissingValueApp:
         buttons = [
             ("🧹 Data Preprocessing", self.open_cleaning_window),
             ("📊 Correlation Matrix", self.open_correlation_window),
-            ("📊 RFE", self.open_rfe_window),
             ("🤖 KNN Performance", self.open_knn_prediction_window),
-            ("🤖 Naive Bayes Performance", self.open_nb_prediction_window),
+            ("📊 Naive Bayes Performance", self.open_nb_prediction_window),
             ("🌳 Decision Tree Performance", self.open_dtree_prediction_window),
+            ("⚡ SVM Performance", self.open_svm_prediction_window),
             ("📊 Model Comparison", self.open_model_comparison_window),
-            ("📈 Student Performance Prediction", self.open_prediction_window),  # Future feature
         ]
 
         for text, command in buttons:
@@ -110,10 +109,6 @@ class MissingValueApp:
     def open_correlation_window(self):
         corr_view = CorrelationMatrixView()
         corr_view.show_correlation()
-        
-    def open_rfe_window(self):
-        rfe_view = RFEFeatureSelector()
-        rfe_view.run_rfe()
 
     def open_knn_prediction_window(self):
         knn_window = tk.Toplevel(self.root)
@@ -133,10 +128,8 @@ class MissingValueApp:
 
     # Placeholder methods for additional buttons
     def open_model_comparison_window(self):
-        print("Model Comparison window - To be implemented")
-
-    def open_prediction_window(self):
-        print("Student Performance Prediction window - To be implemented")
+        compare_window = tk.Toplevel(self.root)
+        ModelComparisonWindow(compare_window)
 
 # Run the app
 if __name__ == "__main__":
