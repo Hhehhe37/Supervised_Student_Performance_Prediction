@@ -9,7 +9,6 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, precision_score, recall_score, f1_score
 import joblib
 from datetime import datetime
-import json
 
 OUTPUT_FOLDER = "CSV_Files"
 
