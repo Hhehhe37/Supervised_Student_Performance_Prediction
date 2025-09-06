@@ -334,7 +334,7 @@ The system will guide you through a simple 3-step process to make an accurate pr
         input_configs = [
             {
                 "label": "❌ Number of Absences",
-                "description": "How many days has the student been absent this semester?",
+                "description": "How many days has the student been absent this month?",
                 "hint": "Enter a number between 0 and 30",
                 "key": "absences",
                 "validation": self.validate_absences
