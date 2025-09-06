@@ -1,9 +1,24 @@
 # Supervised_Student_Performance_Prediction
 
-1. Need to install seaborn (pip install seaborn)
+1. Install seaborn (pip install seaborn)
 2. Install pandas (python -m pip install pandas)
+3. Install tkinter (pip install tkinter)
+4. Install sklearn (pip install -U scikit-learn)
+5. Install matplotlib (pip install matplotlib)
+6. Install numpy (pip install numpy)
+7. Install joblib (pip install joblib)
+8. Install os (pip install os)
+9. Install datetime (pip install datetime)
 
-What included in the ui:
+## Command for install all library
+pip install -r requirements.txt
+
+## How to run the program
+1. Open the terminal
+2. Navigate to the directory where the program is located
+3. Run the command: python PreprocessingUI.py
+4. Follow the instructions in the program to enter the required inputs and obtain the prediction result.
+
 PredicitonModel.py
 1. This file contains the model that is used to predict the student's performance based on the given features.
 2. The model is trained using the data from the dataset and is used to make predictions on new data.
