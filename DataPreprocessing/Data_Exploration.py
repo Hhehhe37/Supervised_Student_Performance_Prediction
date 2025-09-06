@@ -19,7 +19,7 @@ class StatisticsWindow:
         main_frame = ttk.Frame(self.root, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
         style = ttk.Style()
-        style.configure("Treeview", font=("Segoe UI", 12))               # content font
+        style.configure("Treeview", font=("Segoe UI", 13))               # content font
         style.configure("Treeview.Heading", font=("Segoe UI", 16, "bold")) 
         title_label = ttk.Label(main_frame, text="Student Performance Statistics", font=("Segoe UI", 20, "bold"))
         title_label.pack(pady=(0, 15))
