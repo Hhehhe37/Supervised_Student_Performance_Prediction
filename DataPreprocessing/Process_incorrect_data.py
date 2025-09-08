@@ -8,23 +8,33 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 class ReplaceIncorrectDataWindow:
     def __init__(self, window):
+        """
+        Initialize the ReplaceIncorrectDataWindow window.
+        Args:
+            window: The root window to be configured
+        """
         self.root = window
-        self.root.title("❌ Replace Incorrect GradeClass Data")
-        self.root.geometry("900x600")
-        self.root.configure(bg="#f5f7fa")
+        self.root.title("❌ Replace Incorrect GradeClass Data")  # Set window title
+        self.root.geometry("900x600")  # Set window size
+        self.root.configure(bg="#f5f7fa")  # Set background color
 
+        # Define file path and initialize dataframe
         self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")
         self.df = None
 
+        # Create main frame with padding
         main_frame = ttk.Frame(self.root, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Create title label with specific font
         title_label = ttk.Label(main_frame, text="Incorrect Data Replace Report", font=("Segoe UI", 18, "bold"))
         title_label.pack(pady=(0, 15))
 
+        # Create status label for displaying messages
         self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 12), foreground="#228B22")
         self.status_label.pack(pady=10)
 
+        # Start the data replacement process
         self.replace_incorrect_data()
 
     def assign_grade_class(self, gpa):
@@ -81,6 +91,3 @@ class ReplaceIncorrectDataWindow:
 
         except Exception as e:
             self.status_label.config(text=f"❌ Error: {e}", foreground="red")
-
-
-

@@ -8,23 +8,32 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 class StatisticsWindow:
     def __init__(self, window):
+        """
+        Initialize the StatisticsWindow class with the given window.
+        Args:
+            window: The main window to be used for the statistics interface.
+        """
         self.root = window
         self.root.title("📊 Student Performance Statistics")
         self.root.geometry("1100x700")
         self.root.configure(bg="#f5f7fa")
 
+        # Define file path and initialize dataframe
         self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")
         self.df = None
 
+        # Create main frame with padding
         main_frame = ttk.Frame(self.root, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
+        # Configure style for Treeview
         style = ttk.Style()
         style.configure("Treeview", font=("Segoe UI", 13))               # content font
         style.configure("Treeview.Heading", font=("Segoe UI", 16, "bold")) 
+        # Create title label
         title_label = ttk.Label(main_frame, text="Student Performance Statistics", font=("Segoe UI", 20, "bold"))
         title_label.pack(pady=(0, 15))
 
-        # Status label
+        # Status label for displaying messages
         self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 20), foreground="#228B22")
         self.status_label.pack(pady=10)
 

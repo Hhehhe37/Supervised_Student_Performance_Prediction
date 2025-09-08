@@ -8,60 +8,60 @@ OUTPUT_FOLDER = "CSV_Files"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 class CheckMissingWindow:
-    def __init__(self, window, callback=None): 
-        self.callback = callback
-        self.root = window
-        self.root.title("🧹 Student Performance Missing Value Checker")
-        self.root.geometry("900x600")
-        self.root.configure(bg="#f5f7fa")
+    def __init__(self, window, callback=None):   # Initialize the window with optional callback function
+        self.callback = callback  # Store callback function for later use
+        self.root = window  # Set the root window
+        self.root.title("🧹 Student Performance Missing Value Checker")  # Set window title with emoji
+        self.root.geometry("900x600")  # Set window dimensions
+        self.root.configure(bg="#f5f7fa")  # Set background color
 
-        self.df = None
-        self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")
-        self.missing_msg = ""
-        self.duplicate_msg = ""
+        self.df = None  # Initialize dataframe as None
+        self.file_path = os.path.join(OUTPUT_FOLDER, "Student_performance_data _.csv")  # Set file path
+        self.missing_msg = ""  # Initialize missing message
+        self.duplicate_msg = ""  # Initialize duplicate message
 
         # Main frame with padding and white bg for content area
-        main_frame = ttk.Frame(self.root, padding=20, style="Card.TFrame")
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        main_frame = ttk.Frame(self.root, padding=20, style="Card.TFrame")  # Create main frame with padding
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)  # Pack frame with padding
 
         # Title label
-        title_label = ttk.Label(main_frame, text="Missing Value Report", font=("Segoe UI", 18, "bold"))
-        title_label.pack(pady=(0, 15))
+        title_label = ttk.Label(main_frame, text="Missing Value Report", font=("Segoe UI", 18, "bold"))  # Create title label
+        title_label.pack(pady=(0, 15))  # Pack title with vertical padding
 
         # Treeview Frame (to hold treeview + scrollbar nicely)
-        tree_frame = ttk.Frame(main_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True)
+        tree_frame = ttk.Frame(main_frame)  # Create frame for treeview
+        tree_frame.pack(fill=tk.BOTH, expand=True)  # Pack frame to expand
 
         # Treeview widget
-        self.tree = ttk.Treeview(tree_frame, columns=("Column", "Missing Count"), show="headings", height=15)
-        self.tree.heading("Column", text="Column")
+        self.tree = ttk.Treeview(tree_frame, columns=("Column", "Missing Count"), show="headings", height=15)  # Create treeview
+        self.tree.heading("Column", text="Column")  # Set column heading
         self.tree.heading("Missing Count", text="Missing Values")
-        self.tree.column("Column", width=500, anchor=tk.W)
-        self.tree.column("Missing Count", width=150, anchor=tk.CENTER)
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.tree.column("Column", width=500, anchor=tk.W)  # Set column width and alignment
+        self.tree.column("Missing Count", width=150, anchor=tk.CENTER)  # Set count column width and alignment
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)  # Pack treeview to expand
 
         # Vertical scrollbar for treeview
-        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)  # Create scrollbar
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Pack scrollbar on right side
         self.tree.configure(yscrollcommand=scrollbar.set)
 
         # Status label
-        self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 12), foreground="#228B22")
-        self.status_label.pack(pady=15)
+        self.status_label = ttk.Label(main_frame, text="", font=("Segoe UI", 12), foreground="#228B22")  # Create status label
+        self.status_label.pack(pady=15)  # Pack status label with vertical padding
 
-        next_button = ttk.Button(main_frame, text="Next ➡️ Check Duplicates", command=self.open_duplicate_window)
-        next_button.pack(pady=10)
+        next_button = ttk.Button(main_frame, text="Next ➡️ Check Duplicates", command=self.open_duplicate_window)  # Create next button
+        next_button.pack(pady=10)  # Pack button with vertical padding
 
         # Load and process data automatically
-        self.load_and_process_data()
+        self.load_and_process_data()  # Call method to load and process data
 
     # -- Your existing functions unchanged --
-    def load_and_process_data(self):
+    def load_and_process_data(self):  # Method to load and process data
         try:
-            self.df = pd.read_csv(self.file_path)
+            self.df = pd.read_csv(self.file_path)  # Read CSV file into dataframe
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load file:\n{e}")
-            return
+            messagebox.showerror("Error", f"Failed to load file:\n{e}")  # Show error if file loading fails
+            return  # Return if error occurs
         
         self.check_missing()
 

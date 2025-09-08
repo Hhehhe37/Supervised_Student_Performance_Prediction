@@ -18,7 +18,16 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 OUTPUT_FOLDER = "CSV_Files"
 
 class ModelComparisonWindow:
+    """
+    A comprehensive GUI window for comparing multiple machine learning models.
+    Provides detailed analysis, visualization, and metrics comparison.
+    """
     def __init__(self, root):
+        """
+        Initialize the ModelComparisonWindow with all UI components and settings.
+        Args:
+            root: The main tkinter window
+        """
         self.root = root
         self.root.title("📊 Advanced Model Performance Comparison")
         self.root.geometry("1500x1000")
@@ -82,7 +91,7 @@ class ModelComparisonWindow:
             'Decision Tree': tk.BooleanVar(value=True),
             'SVM': tk.BooleanVar(value=True)
         }
-        
+        # Create checkboxes for each model
         for model_name, var in self.model_vars.items():
             cb = tk.Checkbutton(models_frame, text=model_name, variable=var, 
                                font=("Segoe UI", 10), bg="#ffffff")
@@ -127,12 +136,14 @@ class ModelComparisonWindow:
         # Tab 6: Statistics Measurement
         self.create_statistics_tab()
 
+    # Additional methods for other tabs and functionality
     def get_test_size_from_split(self, split_ratio):
         """Convert split ratio string to test_size float"""
         train_pct, test_pct = split_ratio.split(":")
         test_size = int(test_pct) / (int(train_pct) + int(test_pct))
         return test_size
 
+    # Placeholder methods for other tabs
     def create_comparison_tab(self):
         """Create the main comparison table tab"""
         self.tab1 = tk.Frame(self.notebook, bg="#ffffff")

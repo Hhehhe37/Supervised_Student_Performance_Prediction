@@ -13,12 +13,17 @@ OUTPUT_FOLDER = "CSV_Files"
 
 class KNNPerformanceWindow:
     def __init__(self, root):
+        """
+        Initialize the KNN Performance Evaluation window.
+        Args:
+            root: The root window or frame where this window will be placed.
+        """
         self.root = root
-        self.root.title("📈 KNN Performance Evaluation")
-        self.root.geometry("950x750")
+        self.root.title("📈 KNN Performance Evaluation")  # Set window title
+        self.root.geometry("950x750")  # Set window size
         self.root.configure(bg="#f5f7fa")
 
-        # Title
+        # Title label for the window
         title_label = tk.Label(root, text="🔍 KNN Classifier - Find Best k (1 to 20)", font=("Segoe UI", 18, "bold"), bg="#f5f7fa", fg="#333")
         title_label.pack(pady=20)
 

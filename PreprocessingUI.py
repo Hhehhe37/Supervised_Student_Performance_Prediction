@@ -10,68 +10,69 @@ from ModelComparisonWindow import ModelComparisonWindow
 
 class MissingValueApp:
     def __init__(self, root):
+        # Initialize the main application window
         self.root = root
-        self.root.title("Student Performance Prediction")
-        self.root.geometry("1280x800")
-        self.root.configure(bg="#dceeff")
+        self.root.title("Student Performance Prediction")  # Set window title
+        self.root.geometry("1280x800")  # Set window dimensions
+        self.root.configure(bg="#dceeff")  # Set background color
 
         # Create a main frame to center content
-        main_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="ridge")
-        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=600, height=500)
+        main_frame = tk.Frame(root, bg="#ffffff", bd=2, relief="ridge")  # Create white frame with border
+        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=600, height=500)  # Position frame
 
         # Title
         self.label = tk.Label(main_frame, text="🎓 Student Performance Prediction App", font=("Helvetica", 18, "bold"), bg="#ffffff", fg="#333")
-        self.label.pack(pady=20)
+        self.label.pack(pady=20)  # Add padding around label
 
         # Create a canvas and scrollbar for scrollable content
-        canvas_frame = tk.Frame(main_frame, bg="#ffffff")
-        canvas_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        canvas_frame = tk.Frame(main_frame, bg="#ffffff")  # Frame to hold canvas and scrollbar
+        canvas_frame.pack(fill="both", expand=True, padx=20, pady=10)  # Pack with padding
 
         # Canvas for scrolling
-        self.canvas = tk.Canvas(canvas_frame, bg="#ffffff", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = tk.Frame(self.canvas, bg="#ffffff")
+        self.canvas = tk.Canvas(canvas_frame, bg="#ffffff", highlightthickness=0)  # Create canvas
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)  # Create scrollbar
+        self.scrollable_frame = tk.Frame(self.canvas, bg="#ffffff")  # Frame that will scroll
 
         # Configure scrolling
         self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            "<Configure>",  # Bind to configuration changes
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))  # Update scroll region
         )
 
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")  # Create window in canvas
+        self.canvas.configure(yscrollcommand=scrollbar.set)  # Link scrollbar to canvas
 
         # Pack canvas and scrollbar
-        self.canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)  # Pack canvas
+        scrollbar.pack(side="right", fill="y")  # Pack scrollbar
 
         # Enable mouse wheel scrolling
         def _on_mousewheel(event):
-            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")  # Scroll based on mouse wheel
         
         def _bind_to_mousewheel(event):
-            self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            self.canvas.bind_all("<MouseWheel>", _on_mousewheel)  # Bind mouse wheel to canvas
 
         def _unbind_from_mousewheel(event):
-            self.canvas.unbind_all("<MouseWheel>")
+            self.canvas.unbind_all("<MouseWheel>")  # Unbind mouse wheel from canvas
 
-        self.canvas.bind('<Enter>', _bind_to_mousewheel)
-        self.canvas.bind('<Leave>', _unbind_from_mousewheel)
+        self.canvas.bind('<Enter>', _bind_to_mousewheel)  # Bind when mouse enters canvas
+        self.canvas.bind('<Leave>', _unbind_from_mousewheel)  # Bind when mouse leaves canvas
 
-        # Button style
+        # Button style configuration
         button_style = {
-            "bg": "#4fa4ff",        # Blue
+            "bg": "#4fa4ff",        # Blue background
             "fg": "white",          # White text
-            "font": ("Segoe UI", 12),
+            "font": ("Segoe UI", 12),  # Font style
             "width": 40,
             "height": 2,
-            "bd": 0,
+            "bd": 0,               # Border width
             "activebackground": "#0056b3",  # Darker blue on hover
-            "activeforeground": "white",
+            "activeforeground": "white",    # White text on hover
         }
 
         # Create buttons in the scrollable frame
-        self.create_buttons(button_style)
+        self.create_buttons(button_style)  # Create all buttons
 
         # Center the scrollable content
         self.center_scrollable_content()
@@ -89,47 +90,47 @@ class MissingValueApp:
         ]
 
         for text, command in buttons:
-            btn = tk.Button(self.scrollable_frame, text=text, command=command, **button_style)
-            btn.pack(pady=8)
+            btn = tk.Button(self.scrollable_frame, text=text, command=command, **button_style)  # Create button
+            btn.pack(pady=8)  # Pack button with padding
 
     def center_scrollable_content(self):
         """Center the content within the scrollable frame"""
-        self.scrollable_frame.update_idletasks()
-        canvas_width = self.canvas.winfo_width()
+        self.scrollable_frame.update_idletasks()  # Update frame
+        canvas_width = self.canvas.winfo_width()  # Get canvas width
         frame_width = self.scrollable_frame.winfo_reqwidth()
         
-        if canvas_width > frame_width:
-            x_offset = (canvas_width - frame_width) // 2
-            self.canvas.create_window((x_offset, 0), window=self.scrollable_frame, anchor="nw")
+        if canvas_width > frame_width:  # Check if canvas is wider than frame
+            x_offset = (canvas_width - frame_width) // 2  # Calculate offset
+            self.canvas.create_window((x_offset, 0), window=self.scrollable_frame, anchor="nw")  # Reposition frame
 
     def open_cleaning_window(self):
-        new_window = tk.Toplevel(self.root)
-        CheckMissingWindow(new_window)
+        new_window = tk.Toplevel(self.root)  # Create new window
+        CheckMissingWindow(new_window)  # Open cleaning window
 
     def open_correlation_window(self):
         corr_view = CorrelationMatrixView()
-        corr_view.show_correlation()
+        corr_view.show_correlation()  # Show correlation matrix
 
     def open_knn_prediction_window(self):
-        knn_window = tk.Toplevel(self.root)
-        KNNPerformanceWindow(knn_window)
+        knn_window = tk.Toplevel(self.root)  # Create new window
+        KNNPerformanceWindow(knn_window)  # Open KNN performance window
         
     def open_nb_prediction_window(self):
-        nb_window = tk.Toplevel(self.root)
-        NaiveBayesPerformanceWindow(nb_window)
+        nb_window = tk.Toplevel(self.root)  # Create new window
+        NaiveBayesPerformanceWindow(nb_window)  # Open Naive Bayes performance window
 
     def open_dtree_prediction_window(self):
-        dtree_window = tk.Toplevel(self.root)
-        DecisionTreePerformanceWindow(dtree_window)
+        dtree_window = tk.Toplevel(self.root)  # Create new window
+        DecisionTreePerformanceWindow(dtree_window)  # Open Decision Tree performance window
 
     def open_svm_prediction_window(self):
-        svm_window = tk.Toplevel(self.root)
+        svm_window = tk.Toplevel(self.root)  # Create new window
         SVMPerformanceWindow(svm_window)
 
     # Placeholder methods for additional buttons
     def open_model_comparison_window(self):
-        compare_window = tk.Toplevel(self.root)
-        ModelComparisonWindow(compare_window)
+        compare_window = tk.Toplevel(self.root)  # Create new window
+        ModelComparisonWindow(compare_window)  # Open model comparison window
 
 # Run the app
 if __name__ == "__main__":
